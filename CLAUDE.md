@@ -11,31 +11,43 @@ FeatherBot is a TypeScript personal AI agent that connects to messaging platform
 
 ## Iterative Build Process
 
-This project uses a structured iterative build process. When working autonomously (via `build.sh`), follow this exact sequence:
+This project uses a structured iterative build process driven by three skills:
 
-### Per-Iteration Steps
+| Skill | Purpose |
+|-------|---------|
+| `/prd` | Generate a PRD for a milestone (asks clarifying questions, writes `tasks/prd-*.md`) |
+| `/build-loop` | Convert a PRD into `prd.json` (the structured task queue) |
+| `/build` | Pick the next incomplete story, implement it, test it, commit it, update progress |
 
-1. **Read context** - Read `prd.json` and `progress.txt` to understand current state
-2. **Check branch** - Verify you're on the correct git branch (from `prd.json.branchName`). If not, create it from `main`
-3. **Select story** - Pick the highest-priority incomplete story (`passes: false`) from `prd.json`
-4. **Implement** - Complete ONLY that single story. Do not work on multiple stories
-5. **Quality checks** - Run: `pnpm typecheck && pnpm lint && pnpm test` (all must pass)
-6. **Update patterns** - If you discover codebase patterns, update the relevant `AGENTS.md` file in the directory you worked in
-7. **Commit** - `git add -A && git commit -m "feat: [US-XXX] - [Story Title]"`
-8. **Mark complete** - Set `passes: true` for the story in `prd.json`
-9. **Log progress** - Append entry to `progress.txt` with:
-   - Story ID and title
-   - Files modified
-   - Learnings for future iterations
-10. **Check completion** - If ALL stories have `passes: true`, respond with `<promise>COMPLETE</promise>`
+### Typical Workflow
+
+```
+/prd          → create PRD for next milestone
+/build-loop   → convert PRD to prd.json
+/build        → implement story 1
+/build        → implement story 2
+...
+/build        → milestone complete!
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `prd.json` | Active task queue — stories with completion flags |
+| `progress.txt` | Append-only learnings log — patterns, gotchas, context for future work |
+| `tasks/prd-*.md` | Human-readable PRDs for each milestone |
+| `tasks/ROADMAP.md` | All 20 milestones with dependency graph |
+| `ARCHITECTURE.md` | Full reference architecture (nanobot analysis + FeatherBot design) |
+| `analysis-*.md` | Detailed nanobot sub-analysis files (reference only) |
 
 ### Quality Requirements
 
-- All code must pass typecheck (`tsc --noEmit`)
-- All code must pass lint (`biome check`)
-- All tests must pass (`vitest run`)
-- Follow existing patterns in the codebase
-- Keep changes focused and minimal - implement ONLY what the story requires
+- All code must pass typecheck (`pnpm typecheck`)
+- All code must pass lint (`pnpm lint`)
+- All tests must pass (`pnpm test`)
+- Follow existing patterns in the codebase (check `progress.txt` codebase patterns)
+- Keep changes focused and minimal — implement ONLY what the story requires
 - Do not refactor unrelated code
 
 ## Code Conventions
@@ -86,19 +98,9 @@ workspace/           # Default workspace template
 - Test tool execution, not just schemas
 - Mock LLM calls in agent loop tests
 
-## Files You Should Know
-
-| File | Purpose |
-|------|---------|
-| `ARCHITECTURE.md` | Complete reference architecture (nanobot analysis + FeatherBot design) |
-| `prd.json` | Current active task queue with user stories |
-| `progress.txt` | Append-only learnings and patterns from previous iterations |
-| `tasks/prd-*.md` | Human-readable PRDs for each milestone |
-| `analysis-*.md` | Detailed nanobot analysis files (reference only) |
-
 ## Git Conventions
 
-- Branch naming: `feat/<milestone-name>` (e.g., `feat/core-config`)
+- Branch naming: `feat/<milestone-name>` (e.g., `feat/m1-project-scaffold`)
 - Commit format: `feat: [US-XXX] - Short description`
 - One story per commit
 - Never force push
