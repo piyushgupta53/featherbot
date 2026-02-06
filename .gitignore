@@ -14,11 +14,14 @@ dist/
 # FeatherBot data
 .featherbot/
 
-# Build loop (transient)
+# Build loop / project planning (transient)
 prd.json
 progress.txt
 .last-branch
 archive/
+tasks/
+ARCHITECTURE.md
+analysis-*.md
 
 # IDE
 .vscode/
