@@ -22,7 +22,8 @@ export interface OutboundMessage {
 export interface ToolDefinition {
 	name: string;
 	description: string;
-	parameters: z.ZodType;
+	// biome-ignore lint/suspicious/noExplicitAny: ZodObject requires type params that vary per tool
+	parameters: z.ZodObject<any>;
 	execute: (params: Record<string, unknown>) => Promise<string>;
 }
 

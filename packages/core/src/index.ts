@@ -42,3 +42,24 @@ export type {
 	StreamPart,
 	StreamResult,
 } from "./provider/index.js";
+export {
+	createToolRegistry,
+	EditFileTool,
+	ExecTool,
+	ListDirTool,
+	ReadFileTool,
+	ToolRegistry,
+	WriteFileTool,
+} from "./tools/index.js";
+export { isWithinWorkspace, resolvePath, validatePath } from "./tools/index.js";
+export type {
+	EditFileToolOptions,
+	ExecToolOptions,
+	ListDirToolOptions,
+	PathValidationResult,
+	ReadFileToolOptions,
+	Tool,
+	ToolExecutionResult,
+	ToolRegistryDefinition,
+	WriteFileToolOptions,
+} from "./tools/index.js";
