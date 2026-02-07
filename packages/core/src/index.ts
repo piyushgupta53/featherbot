@@ -63,3 +63,16 @@ export type {
 	ToolRegistryDefinition,
 	WriteFileToolOptions,
 } from "./tools/index.js";
+export {
+	AgentLoop,
+	buildToolMap,
+	createAgentLoop,
+	InMemoryHistory,
+} from "./agent/index.js";
+export type {
+	AgentLoopOptions,
+	AgentLoopResult,
+	ConversationHistory,
+	StepCallback,
+	StepEvent,
+} from "./agent/index.js";
