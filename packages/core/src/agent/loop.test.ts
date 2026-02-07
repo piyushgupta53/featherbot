@@ -35,6 +35,7 @@ function makeInbound(content: string, overrides?: Partial<InboundMessage>): Inbo
 		timestamp: new Date(),
 		media: [],
 		metadata: {},
+		messageId: "test-msg-1",
 		...overrides,
 	};
 }

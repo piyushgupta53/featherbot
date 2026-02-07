@@ -1,23 +1,10 @@
 import type { z } from "zod";
 
-export interface InboundMessage {
-	channel: string;
-	senderId: string;
-	chatId: string;
-	content: string;
-	timestamp: Date;
-	media: string[];
-	metadata: Record<string, unknown>;
-}
-
-export interface OutboundMessage {
-	channel: string;
-	chatId: string;
-	content: string;
-	replyTo: string | null;
-	media: string[];
-	metadata: Record<string, unknown>;
-}
+export type {
+	InboundMessage,
+	OutboundMessage,
+	SessionKey,
+} from "@featherbot/bus";
 
 export interface ToolDefinition {
 	name: string;
@@ -51,5 +38,3 @@ export interface LLMResponse {
 	usage: LLMUsage;
 	finishReason: string;
 }
-
-export type SessionKey = `${string}:${string}`;

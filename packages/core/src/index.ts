@@ -34,6 +34,16 @@ export type {
 	ToolDefinition,
 	ToolResult,
 } from "./types.js";
+export { createInboundMessage, createOutboundMessage, MessageBus } from "@featherbot/bus";
+export type {
+	BusErrorEvent,
+	BusEvent,
+	BusEventHandler,
+	BusEventType,
+	InboundMessageEvent,
+	MessageBusOptions,
+	OutboundMessageEvent,
+} from "@featherbot/bus";
 export { createProvider, resolveModel, VercelLLMProvider, withRetry } from "./provider/index.js";
 export type { RetryOptions } from "./provider/index.js";
 export type {
