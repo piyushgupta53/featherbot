@@ -76,3 +76,5 @@ export type {
 	StepCallback,
 	StepEvent,
 } from "./agent/index.js";
+export { createMemoryStore, FileMemoryStore } from "./memory/index.js";
+export type { MemoryStore } from "./memory/index.js";
