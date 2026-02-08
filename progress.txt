@@ -1,6 +1,6 @@
 # FeatherBot Progress Log
 Started: 2026-02-08
-Milestone: M17 - Sub-agents
+Milestone: M20 - Docker + Deployment
 ---
 
 ## Codebase Patterns
@@ -55,84 +55,80 @@ Milestone: M17 - Sub-agents
 - SubagentManager: own AgentLoop instances (not reuse main), reduced tool set (5 tools only)
 - Mutable origin context pattern: gateway subscribes to `message:inbound` to update context before adapter processes
 - vi.waitFor() for async sub-agent completion assertions (avoids manual timers for fast tasks)
+- Mock globalThis.fetch: save original in beforeEach, restore in afterEach, assign vi.fn() in test
+- Tool count assertions: createToolRegistry registers 7 tools (5 core + 2 web)
+- Gateway uses minimal interfaces (GatewayAdapter, GatewayBus, etc.) to avoid cross-package coupling
+- Biome collapses short method chains like `.getChannels().map(...)` onto one line
+- Headless mode: check `process.stdin.isTTY` to skip terminal channel in Docker/CI
+- Object.defineProperty for mocking process.stdin.isTTY in tests (configurable: true for restore)
 
 ---
 
-### US-001 - Sub-agent Types & Config Schema (DONE)
+### US-001 - Dockerfile (Multi-stage Build) (DONE)
 **Files modified:**
-- packages/core/src/agent/subagent-types.ts (created)
-- packages/core/src/config/schema.ts (SubagentConfigSchema added)
-- packages/core/src/agent/index.ts (exports)
-- packages/core/src/index.ts (exports)
+- Dockerfile (new)
 
 **Learnings:**
-- SubagentConfigSchema: maxIterations 15, timeoutMs 300000
-- Type-only exports go in separate `export type { ... }` block per biome conventions
+- Multi-stage Docker: deps → build → runtime pattern keeps image lean
+- better-sqlite3 needs python3 + make + g++ in build stage, only libstdc++6 at runtime
+- corepack enable + corepack prepare pnpm@version for pnpm in Docker
+- node:22-slim (Debian) avoids musl/Alpine issues with native modules
+- COPY individual package.json files for each workspace package for layer caching
+- pnpm install --frozen-lockfile --prod for runtime stage (no devDeps)
 
 ---
 
-### US-002 - SubagentManager Core Implementation (DONE)
+### US-002 - .dockerignore (DONE)
 **Files modified:**
-- packages/core/src/agent/subagent.ts (created)
-- packages/core/src/agent/index.ts (export SubagentManager)
-- packages/core/src/index.ts (export SubagentManager)
+- .dockerignore (new)
 
 **Learnings:**
-- SubagentManager creates own AgentLoop per spawn (fresh session, reduced tools)
-- Promise.race for timeout: `new Promise<never>((_, reject) => setTimeout(reject, ms))`
-- Reduced tool set: exec, read_file, write_file, edit_file, list_dir only
+- Exclude test files (*.test.ts), planning files (tasks/, prd.json, progress.txt), IDE dirs
+- Keep .dockerignore aligned with .gitignore patterns but also exclude .git/ itself
 
 ---
 
-### US-003 - SubagentManager Tests (DONE)
+### US-003 - .env.example (DONE)
 **Files modified:**
-- packages/core/src/agent/subagent.test.ts (created, 10 tests)
+- .env.example (new)
 
 **Learnings:**
-- vi.waitFor() is better than manual delays for async completion tests
-- vi.useFakeTimers() + vi.advanceTimersByTimeAsync() for timeout tests
-- Mock provider with `() => new Promise(() => {})` for never-resolving LLM
+- Config loader uses `FEATHERBOT_` prefix with `__` as nested separator
+- All config variables derived from packages/core/src/config/schema.ts
+- Document defaults as comments next to each variable
 
 ---
 
-### US-004 - SpawnTool Implementation (DONE)
+### US-004 - Headless Mode (Skip Terminal Channel) (DONE)
 **Files modified:**
-- packages/core/src/tools/spawn-tool.ts (created)
-- packages/core/src/tools/index.ts (exports)
-- packages/core/src/index.ts (exports)
+- packages/cli/src/commands/gateway.ts (modified)
+- packages/cli/src/commands/gateway.test.ts (new)
 
 **Learnings:**
-- SpawnTool + SubagentStatusTool in same file
-- Biome wraps long template literal pushes across lines
+- process.stdin.isTTY is undefined (falsy) when no TTY, true when TTY attached
+- Gateway test mocking: mock all 4 packages (@featherbot/bus, channels, core, scheduler)
+- Object.defineProperty with configurable: true to mock/restore process.stdin.isTTY
 
 ---
 
-### US-005 - SpawnTool Tests (DONE)
+### US-005 - docker-compose.yml (DONE)
 **Files modified:**
-- packages/core/src/tools/spawn-tool.test.ts (created, 7 tests)
+- docker-compose.yml (new)
 
 **Learnings:**
-- Mock SubagentManager as plain object with vi.fn() methods, cast via `as unknown as SubagentManager`
+- No external services needed — SQLite is embedded
+- Named volume for persistent data avoids data loss on container recreation
+- env_file: .env keeps secrets out of compose file
 
 ---
 
-### US-006 - Gateway Integration (DONE)
+### US-006 - Build Smoke Test (DONE)
 **Files modified:**
-- packages/cli/src/commands/gateway.ts
+- Dockerfile (updated smoke test comments)
 
 **Learnings:**
-- Must `pnpm --filter @featherbot/core build` before CLI can import new core exports
-- Mutable origin context: bus.subscribe("message:inbound") to update before adapter processes
-- onComplete callback creates OutboundMessage and publishes to bus
-
----
-
-### US-007 - Sub-agent Result Routing & Integration Test (DONE)
-**Files modified:**
-- packages/core/src/agent/subagent-integration.test.ts (created, 3 tests)
-
-**Learnings:**
-- Integration tests replicate gateway's onComplete callback pattern with mock bus
-- Result format: "Background task completed/failed:\nTask: ...\nResult/Error: ..."
+- Smoke test is manual verification — no automated Docker test in CI
+- Gateway SIGTERM handler already present from M19 implementation
+- Document smoke test commands in Dockerfile header for discoverability
 
 ---
