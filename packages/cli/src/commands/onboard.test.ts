@@ -50,10 +50,9 @@ describe("runOnboard", () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
-	// New flow: apiKey → confirm detection → model → telegram → whatsapp
+	// Flow: apiKey → confirm detection → model → telegram → whatsapp → brave key
 	it("creates config with auto-detected anthropic provider", async () => {
-		// sk-ant-key → detected anthropic → confirm Y → model 1 → no telegram → no whatsapp
-		const { input, output } = createStreams(["sk-ant-test-key-123", "y", "1", "n", "n"]);
+		const { input, output } = createStreams(["sk-ant-test-key-123", "y", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -73,7 +72,7 @@ describe("runOnboard", () => {
 	});
 
 	it("creates workspace directory with template files", async () => {
-		const { input, output } = createStreams(["sk-ant-test-key", "y", "1", "n", "n"]);
+		const { input, output } = createStreams(["sk-ant-test-key", "y", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -93,8 +92,7 @@ describe("runOnboard", () => {
 	});
 
 	it("auto-detects openai from sk- prefix", async () => {
-		// sk-openai-key → detected openai → confirm y → model 1 → no telegram → no whatsapp
-		const { input, output } = createStreams(["sk-openai-key", "y", "1", "n", "n"]);
+		const { input, output } = createStreams(["sk-openai-key", "y", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -111,8 +109,7 @@ describe("runOnboard", () => {
 	});
 
 	it("allows override when detection is wrong", async () => {
-		// sk-key → detected openai → reject (n) → choose anthropic (1) → model 1 → no tg → no wa
-		const { input, output } = createStreams(["sk-key", "n", "1", "1", "n", "n"]);
+		const { input, output } = createStreams(["sk-key", "n", "1", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -129,8 +126,7 @@ describe("runOnboard", () => {
 	});
 
 	it("falls back to provider menu for unrecognized key", async () => {
-		// unknown-key → no detection → choose openai (2) → model 1 → no tg → no wa
-		const { input, output } = createStreams(["unknown-key", "2", "1", "n", "n"]);
+		const { input, output } = createStreams(["unknown-key", "2", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -168,8 +164,7 @@ describe("runOnboard", () => {
 	});
 
 	it("sets model from user selection", async () => {
-		// sk-ant-key → confirm → model 2 (haiku) → no tg → no wa
-		const { input, output } = createStreams(["sk-ant-key", "y", "2", "n", "n"]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "2", "n", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -186,8 +181,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables telegram when user says yes", async () => {
-		// sk-ant-key → confirm → model 1 → yes telegram → token → no whatsapp
-		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n"]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -205,8 +199,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables whatsapp and shows login reminder", async () => {
-		// sk-ant-key → confirm → model 1 → no telegram → yes whatsapp
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y"]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -223,8 +216,25 @@ describe("runOnboard", () => {
 		expect(getOutput()).toContain("featherbot whatsapp login");
 	});
 
+	it("saves brave search API key when provided", async () => {
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "n", "n", "BSA-test-key"]);
+		const configDir = join(testDir, "config");
+		const workspaceDir = join(testDir, "workspace");
+
+		await runOnboard({
+			configDir,
+			workspaceDir,
+			templateDir: resolve(process.cwd(), "..", "..", "workspace"),
+			input,
+			output,
+		});
+
+		const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf-8"));
+		expect(config.tools.web.search.apiKey).toBe("BSA-test-key");
+	});
+
 	it("prints success message with next steps", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n"]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", ""]);
 
 		await runOnboard({
 			configDir: join(testDir, "config"),

@@ -103,6 +103,13 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 			whatsappEnabled = true;
 		}
 
+		// Step 7: Web search (Brave API)
+		let braveApiKey = "";
+		output.write("\nWeb search lets your agent look things up online (uses Brave Search).\n");
+		output.write("Get a free API key at https://brave.com/search/api/\n");
+		const braveAnswer = await rl.question("Brave Search API key (Enter to skip): ");
+		braveApiKey = braveAnswer.trim();
+
 		// Build config
 		const config = FeatherBotConfigSchema.parse({
 			providers: {
@@ -120,6 +127,13 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 				},
 				whatsapp: {
 					enabled: whatsappEnabled,
+				},
+			},
+			tools: {
+				web: {
+					search: {
+						apiKey: braveApiKey,
+					},
 				},
 			},
 		});
