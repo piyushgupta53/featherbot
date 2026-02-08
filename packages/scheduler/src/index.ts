@@ -14,3 +14,4 @@ export type {
 	CronSchedule,
 	CronStore,
 } from "./types.js";
+export { CronJobStore } from "./store.js";
