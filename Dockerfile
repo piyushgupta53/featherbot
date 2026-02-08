@@ -1,10 +1,12 @@
 # FeatherBot Dockerfile — Multi-stage Production Build
 #
 # Smoke test commands:
-#   docker build -t featherbot .
-#   docker run --rm -e FEATHERBOT_providers__anthropic__apiKey=test featherbot
-#   docker run --rm featherbot sh -c "node --version"
-#   echo "Clean shutdown:" && docker run -d --name fb-test featherbot && sleep 2 && docker stop fb-test && docker rm fb-test
+#   1. Build:     docker build -t featherbot .
+#   2. Start:     docker run --rm -e FEATHERBOT_providers__anthropic__apiKey=test featherbot
+#                 (should print "FeatherBot gateway running (headless)")
+#   3. Node:      docker run --rm featherbot sh -c "node --version"
+#   4. SIGTERM:   docker run -d --name fb-test featherbot && sleep 2 && docker stop fb-test && docker rm fb-test
+#                 (should print "Shutting down..." and exit cleanly)
 
 # ── Stage 1: Dependencies ──
 FROM node:22-slim AS deps
