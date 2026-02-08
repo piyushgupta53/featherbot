@@ -36,9 +36,10 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	const toolRegistry = createToolRegistry(config);
 
 	let cronService: CronService | undefined;
+	let cronTool: CronTool | undefined;
 	if (config.cron.enabled) {
 		cronService = new CronService({
-			storePath: config.cron.storePath,
+			storePath: resolveHome(config.cron.storePath),
 			onJobFire: async (job) => {
 				const result = await agentLoop.processDirect(job.payload.message, {
 					sessionKey: `cron:${job.id}`,
@@ -60,7 +61,8 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 				}
 			},
 		});
-		toolRegistry.register(new CronTool(cronService));
+		cronTool = new CronTool(cronService);
+		toolRegistry.register(cronTool);
 	}
 
 	const originContext: SpawnToolOriginContext = { channel: "", chatId: "" };
@@ -97,6 +99,15 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		workspacePath: workspace,
 		memoryStore,
 		skillsLoader,
+		onStepFinish: (event) => {
+			for (const tc of event.toolCalls) {
+				console.log(`[tool] ${tc.name}(${JSON.stringify(tc.arguments)})`);
+			}
+			for (const tr of event.toolResults) {
+				const preview = tr.content.length > 200 ? `${tr.content.slice(0, 200)}...` : tr.content;
+				console.log(`[tool] ${tr.toolName} → ${preview}`);
+			}
+		},
 	});
 
 	let heartbeatService: HeartbeatService | undefined;
@@ -145,6 +156,9 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	bus.subscribe("message:inbound", (event) => {
 		originContext.channel = event.message.channel;
 		originContext.chatId = event.message.chatId;
+		if (cronTool) {
+			cronTool.setContext(event.message.channel, event.message.chatId);
+		}
 	});
 
 	return new Gateway({
