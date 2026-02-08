@@ -77,11 +77,11 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 			label: choices[0]?.label ?? "",
 			description: "",
 		};
-		output.write("\nChoose a model:\n");
+		output.write("\nChoose a model (enter a number):\n");
 		for (const [i, choice] of choices.entries()) {
 			output.write(`  ${i + 1}. ${choice.label} — ${choice.description}\n`);
 		}
-		const modelAnswer = await rl.question("Model [1]: ");
+		const modelAnswer = await rl.question(`Enter 1-${choices.length} [1]: `);
 		const modelIndex = Number.parseInt(modelAnswer.trim(), 10);
 		const selectedModel =
 			(modelIndex >= 1 && modelIndex <= choices.length ? choices[modelIndex - 1] : undefined) ??
