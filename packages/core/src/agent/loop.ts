@@ -36,6 +36,7 @@ export class AgentLoop {
 				bootstrapFiles: options.config.bootstrapFiles,
 				agentName: "FeatherBot",
 				memoryStore: options.memoryStore,
+				skillsLoader: options.skillsLoader,
 			});
 		}
 	}

@@ -1,8 +1,10 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { platform } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { SkillsLoader } from "../skills/loader.js";
 import { ContextBuilder } from "./context-builder.js";
 import type {
 	ContextBuilderOptions,
@@ -349,6 +351,82 @@ describe("ContextBuilder", () => {
 			const builder = new ContextBuilder(defaultOptions);
 			const { systemPrompt } = await builder.build();
 			expect(systemPrompt).not.toContain("## Memory");
+		});
+	});
+
+	describe("skills integration", () => {
+		function makeSkillDir(name: string, frontmatter: string, body: string): string {
+			const dir = mkdtempSync(join(tmpdir(), "skills-ctx-"));
+			const skillDir = join(dir, name);
+			mkdirSync(skillDir, { recursive: true });
+			writeFileSync(join(skillDir, "SKILL.md"), `---\n${frontmatter}\n---\n\n${body}`);
+			return dir;
+		}
+
+		it("omits skills section when no skillsLoader provided", async () => {
+			const builder = new ContextBuilder(defaultOptions);
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).not.toContain("## Skills");
+		});
+
+		it("includes skills section when skillsLoader is provided", async () => {
+			const dir = makeSkillDir("weather", 'name: weather\ndescription: "Check weather"', "# W");
+			const loader = new SkillsLoader({ builtinSkillsDir: dir });
+			const builder = new ContextBuilder({ ...defaultOptions, skillsLoader: loader });
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("## Skills");
+			expect(systemPrompt).toContain("### Available Skills");
+			expect(systemPrompt).toContain("read_file tool");
+		});
+
+		it("includes always-loaded skills with full content", async () => {
+			const dir = makeSkillDir(
+				"core-skill",
+				'name: core-skill\ndescription: "Core"\nalways: true',
+				"Always loaded content here.",
+			);
+			const loader = new SkillsLoader({ builtinSkillsDir: dir });
+			const builder = new ContextBuilder({ ...defaultOptions, skillsLoader: loader });
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### Active Skills");
+			expect(systemPrompt).toContain("#### core-skill");
+			expect(systemPrompt).toContain("Always loaded content here.");
+		});
+
+		it("includes XML summary for non-always skills", async () => {
+			const dir = makeSkillDir("weather", 'name: weather\ndescription: "Check weather"', "# W");
+			const loader = new SkillsLoader({ builtinSkillsDir: dir });
+			const builder = new ContextBuilder({ ...defaultOptions, skillsLoader: loader });
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("<skills>");
+			expect(systemPrompt).toContain('name="weather"');
+			expect(systemPrompt).toContain("</skills>");
+		});
+
+		it("skills section appears between memory and session", async () => {
+			const ws = await makeTempWorkspace();
+			const skillDir = makeSkillDir("test", 'name: test\ndescription: "T"', "# T");
+			const loader = new SkillsLoader({ builtinSkillsDir: skillDir });
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				skillsLoader: loader,
+				memoryStore: {
+					getMemoryContext: async () => "Some memory",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build({
+				channelName: "terminal",
+			});
+			const memoryIdx = systemPrompt.indexOf("## Memory");
+			const skillsIdx = systemPrompt.indexOf("## Skills");
+			const sessionIdx = systemPrompt.indexOf("## Session");
+			expect(memoryIdx).toBeGreaterThanOrEqual(0);
+			expect(skillsIdx).toBeGreaterThan(memoryIdx);
+			expect(sessionIdx).toBeGreaterThan(skillsIdx);
 		});
 	});
 });

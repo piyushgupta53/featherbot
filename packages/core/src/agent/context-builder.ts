@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { platform } from "node:os";
 import { join } from "node:path";
 import type { MemoryStore } from "../memory/types.js";
+import type { SkillsLoader } from "../skills/loader.js";
 
 export interface SessionContext {
 	channelName?: string;
@@ -13,6 +14,7 @@ export interface ContextBuilderOptions {
 	bootstrapFiles: string[];
 	agentName: string;
 	memoryStore?: MemoryStore;
+	skillsLoader?: SkillsLoader;
 }
 
 export interface ContextBuilderResult {
@@ -24,12 +26,14 @@ export class ContextBuilder {
 	readonly bootstrapFiles: string[];
 	readonly agentName: string;
 	readonly memoryStore?: MemoryStore;
+	readonly skillsLoader?: SkillsLoader;
 
 	constructor(options: ContextBuilderOptions) {
 		this.workspacePath = options.workspacePath;
 		this.bootstrapFiles = options.bootstrapFiles;
 		this.agentName = options.agentName;
 		this.memoryStore = options.memoryStore;
+		this.skillsLoader = options.skillsLoader;
 	}
 
 	async build(sessionContext?: SessionContext): Promise<ContextBuilderResult> {
@@ -44,6 +48,11 @@ export class ContextBuilder {
 		const memorySection = await this.buildMemorySection();
 		if (memorySection) {
 			sections.push(memorySection);
+		}
+
+		const skillsSection = this.buildSkillsSection();
+		if (skillsSection) {
+			sections.push(skillsSection);
 		}
 
 		const sessionSection = this.buildSessionSection(sessionContext);
@@ -76,6 +85,37 @@ export class ContextBuilder {
 			return null;
 		}
 		return `## Memory\n${trimmed}`;
+	}
+
+	private buildSkillsSection(): string | null {
+		if (this.skillsLoader === undefined) {
+			return null;
+		}
+
+		const lines: string[] = ["## Skills"];
+
+		const alwaysLoaded = this.skillsLoader.getAlwaysLoadedSkills();
+		if (alwaysLoaded.length > 0) {
+			lines.push("");
+			lines.push("### Active Skills");
+			for (const skill of alwaysLoaded) {
+				lines.push("");
+				lines.push(`#### ${skill.name}`);
+				lines.push(skill.body);
+			}
+		}
+
+		const summary = this.skillsLoader.buildSummary();
+		lines.push("");
+		lines.push("### Available Skills");
+		lines.push("");
+		lines.push(
+			"To use an available skill, read its SKILL.md file using the read_file tool to get full instructions.",
+		);
+		lines.push("");
+		lines.push(summary);
+
+		return lines.join("\n");
 	}
 
 	private buildSessionSection(sessionContext?: SessionContext): string | null {

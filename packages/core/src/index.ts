@@ -96,6 +96,21 @@ export type {
 export { createMemoryStore, FileMemoryStore } from "./memory/index.js";
 export type { MemoryStore } from "./memory/index.js";
 export {
+	createSkillsLoader,
+	parseFrontmatter,
+	SkillMetadataSchema,
+	SkillRequirementsSchema,
+	SkillsLoader,
+} from "./skills/index.js";
+export type {
+	ParsedFrontmatter,
+	Skill,
+	SkillMetadata,
+	SkillRequirements,
+	SkillsLoaderOptions,
+	SkillSource,
+} from "./skills/index.js";
+export {
 	createHistory,
 	createSessionStore,
 	initDatabase,

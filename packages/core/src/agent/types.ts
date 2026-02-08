@@ -1,6 +1,7 @@
 import type { AgentConfig, SessionConfig } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
 import type { LLMMessage, LLMProvider } from "../provider/types.js";
+import type { SkillsLoader } from "../skills/loader.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { LLMToolCall, LLMUsage, ToolResult } from "../types.js";
 
@@ -13,6 +14,7 @@ export interface AgentLoopOptions {
 	memoryStore?: MemoryStore;
 	workspacePath?: string;
 	sessionConfig?: SessionConfig;
+	skillsLoader?: SkillsLoader;
 }
 
 export interface AgentLoopResult {

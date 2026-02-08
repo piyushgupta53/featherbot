@@ -1,6 +1,7 @@
 import type { FeatherBotConfig } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
 import { createProvider } from "../provider/index.js";
+import type { SkillsLoader } from "../skills/loader.js";
 import { createToolRegistry } from "../tools/index.js";
 import { AgentLoop } from "./loop.js";
 import type { StepCallback } from "./types.js";
@@ -12,6 +13,7 @@ export function createAgentLoop(
 		onStepFinish?: StepCallback;
 		workspacePath?: string;
 		memoryStore?: MemoryStore;
+		skillsLoader?: SkillsLoader;
 	},
 ): AgentLoop {
 	const provider = createProvider(config);
@@ -25,6 +27,7 @@ export function createAgentLoop(
 		workspacePath: options?.workspacePath,
 		memoryStore: options?.memoryStore,
 		sessionConfig: config.session,
+		skillsLoader: options?.skillsLoader,
 	});
 }
 
