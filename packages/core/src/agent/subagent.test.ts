@@ -220,13 +220,15 @@ describe("SubagentManager", () => {
 				expect(toolNames).not.toContain("subagent_status");
 				expect(toolNames).not.toContain("cron");
 				expect(toolNames).not.toContain("message");
-				// Should have only the 5 reduced tools
+				// Should have the 7 reduced tools (5 core + 2 web)
 				expect(toolNames).toContain("exec");
 				expect(toolNames).toContain("read_file");
 				expect(toolNames).toContain("write_file");
 				expect(toolNames).toContain("edit_file");
 				expect(toolNames).toContain("list_dir");
-				expect(toolNames.length).toBe(5);
+				expect(toolNames).toContain("web_search");
+				expect(toolNames).toContain("web_fetch");
+				expect(toolNames.length).toBe(7);
 			}
 			return makeResult();
 		});

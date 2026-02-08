@@ -4,6 +4,8 @@ import { ExecTool } from "./exec-tool.js";
 import { ListDirTool } from "./list-dir-tool.js";
 import { ReadFileTool } from "./read-file-tool.js";
 import { ToolRegistry } from "./registry.js";
+import { WebFetchTool } from "./web-fetch-tool.js";
+import { WebSearchTool } from "./web-search-tool.js";
 import { WriteFileTool } from "./write-file-tool.js";
 
 export function createToolRegistry(config: FeatherBotConfig): ToolRegistry {
@@ -23,6 +25,18 @@ export function createToolRegistry(config: FeatherBotConfig): ToolRegistry {
 	registry.register(new WriteFileTool({ workspaceDir, restrictToWorkspace }));
 	registry.register(new EditFileTool({ workspaceDir, restrictToWorkspace }));
 	registry.register(new ListDirTool({ workspaceDir, restrictToWorkspace }));
+	registry.register(
+		new WebSearchTool({
+			apiKey: config.tools.web.search.apiKey,
+			maxResults: config.tools.web.search.maxResults,
+		}),
+	);
+	registry.register(
+		new WebFetchTool({
+			maxContentLength: config.tools.web.fetch.maxContentLength,
+			timeoutMs: config.tools.web.fetch.timeoutMs,
+		}),
+	);
 
 	return registry;
 }
@@ -43,5 +57,9 @@ export type { ReadFileToolOptions } from "./read-file-tool.js";
 export { ToolRegistry } from "./registry.js";
 export type { ToolRegistryDefinition } from "./registry.js";
 export type { Tool, ToolExecutionResult } from "./types.js";
+export { WebFetchTool } from "./web-fetch-tool.js";
+export type { WebFetchToolOptions } from "./web-fetch-tool.js";
+export { WebSearchTool } from "./web-search-tool.js";
+export type { WebSearchToolOptions } from "./web-search-tool.js";
 export { WriteFileTool } from "./write-file-tool.js";
 export type { WriteFileToolOptions } from "./write-file-tool.js";

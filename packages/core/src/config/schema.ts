@@ -55,12 +55,22 @@ export const WebSearchToolConfigSchema = z.object({
 	maxResults: z.number().int().positive().default(5),
 });
 
+export const WebFetchToolConfigSchema = z.object({
+	maxContentLength: z.number().int().positive().default(50000),
+	timeoutMs: z.number().int().positive().default(30000),
+});
+
 export const ExecToolConfigSchema = z.object({
 	timeout: z.number().int().positive().default(60),
 });
 
 export const ToolConfigSchema = z.object({
-	web: z.object({ search: WebSearchToolConfigSchema.default({}) }).default({}),
+	web: z
+		.object({
+			search: WebSearchToolConfigSchema.default({}),
+			fetch: WebFetchToolConfigSchema.default({}),
+		})
+		.default({}),
 	exec: ExecToolConfigSchema.default({}),
 	restrictToWorkspace: z.boolean().default(false),
 });
@@ -106,4 +116,5 @@ export type ToolConfig = z.infer<typeof ToolConfigSchema>;
 export type CronConfig = z.infer<typeof CronConfigSchema>;
 export type HeartbeatConfig = z.infer<typeof HeartbeatConfigSchema>;
 export type SubagentConfig = z.infer<typeof SubagentConfigSchema>;
+export type WebFetchToolConfig = z.infer<typeof WebFetchToolConfigSchema>;
 export type FeatherBotConfig = z.infer<typeof FeatherBotConfigSchema>;

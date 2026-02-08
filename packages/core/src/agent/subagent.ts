@@ -6,6 +6,8 @@ import { ExecTool } from "../tools/exec-tool.js";
 import { ListDirTool } from "../tools/list-dir-tool.js";
 import { ReadFileTool } from "../tools/read-file-tool.js";
 import { ToolRegistry } from "../tools/registry.js";
+import { WebFetchTool } from "../tools/web-fetch-tool.js";
+import { WebSearchTool } from "../tools/web-search-tool.js";
 import { WriteFileTool } from "../tools/write-file-tool.js";
 import { AgentLoop } from "./loop.js";
 import type { SpawnOptions, SubagentState } from "./subagent-types.js";
@@ -109,6 +111,18 @@ export class SubagentManager {
 		registry.register(new WriteFileTool({ workspaceDir, restrictToWorkspace }));
 		registry.register(new EditFileTool({ workspaceDir, restrictToWorkspace }));
 		registry.register(new ListDirTool({ workspaceDir, restrictToWorkspace }));
+		registry.register(
+			new WebSearchTool({
+				apiKey: this.config.tools.web.search.apiKey,
+				maxResults: this.config.tools.web.search.maxResults,
+			}),
+		);
+		registry.register(
+			new WebFetchTool({
+				maxContentLength: this.config.tools.web.fetch.maxContentLength,
+				timeoutMs: this.config.tools.web.fetch.timeoutMs,
+			}),
+		);
 
 		return registry;
 	}

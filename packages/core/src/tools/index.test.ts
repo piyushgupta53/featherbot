@@ -8,19 +8,21 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 }
 
 describe("createToolRegistry", () => {
-	it("returns a registry with all 5 built-in tools", () => {
+	it("returns a registry with all 7 built-in tools", () => {
 		const registry = createToolRegistry(makeConfig());
 		expect(registry.has("exec")).toBe(true);
 		expect(registry.has("read_file")).toBe(true);
 		expect(registry.has("write_file")).toBe(true);
 		expect(registry.has("edit_file")).toBe(true);
 		expect(registry.has("list_dir")).toBe(true);
+		expect(registry.has("web_search")).toBe(true);
+		expect(registry.has("web_fetch")).toBe(true);
 	});
 
-	it("has exactly 5 tool definitions", () => {
+	it("has exactly 7 tool definitions", () => {
 		const registry = createToolRegistry(makeConfig());
 		const defs = registry.getDefinitions();
-		expect(defs).toHaveLength(5);
+		expect(defs).toHaveLength(7);
 	});
 
 	it("exec tool is callable via registry", async () => {
