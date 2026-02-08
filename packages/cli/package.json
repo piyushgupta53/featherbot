@@ -5,6 +5,10 @@
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"bin": {
+		"featherbot": "./dist/bin.js",
+		"fb": "./dist/bin.js"
+	},
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
@@ -12,12 +16,21 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts",
+		"build": "tsup src/index.ts src/bin.ts --format esm --dts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check src/",
 		"test": "vitest run --passWithNoTests"
 	},
 	"engines": {
 		"node": ">=20"
+	},
+	"dependencies": {
+		"@featherbot/bus": "workspace:*",
+		"@featherbot/channels": "workspace:*",
+		"@featherbot/core": "workspace:*",
+		"commander": "^13.1.0"
+	},
+	"devDependencies": {
+		"vitest": "^3.0.5"
 	}
 }
