@@ -48,7 +48,7 @@ export class ContextBuilder {
 
 		const firstConversation = this.isFirstConversation(contentMap);
 		if (firstConversation) {
-			sections.push(this.buildFirstConversationSection());
+			sections.push(this.buildFirstConversationSection(sessionContext));
 		}
 
 		const memorySection = await this.buildMemorySection();
@@ -170,23 +170,31 @@ export class ContextBuilder {
 		return userContent.includes("(your name here)");
 	}
 
-	private buildFirstConversationSection(): string {
+	private buildFirstConversationSection(sessionContext?: SessionContext): string {
+		const channel = sessionContext?.channelName ?? "terminal";
 		const lines = [
 			"## First Conversation",
 			"This is the user's first conversation — USER.md still has placeholder values.",
+			`The user is chatting from the "${channel}" channel.`,
 			"",
 			"Your goals for this conversation:",
 			"1. Warmly introduce yourself by name and explain briefly what you can do.",
 			"2. Naturally ask the user's name, where they're from, and their timezone.",
 			"3. Ask what they're interested in or how they plan to use you.",
 			"4. Keep it conversational — ask only 1-2 questions at a time, don't interrogate.",
-			"5. Once you've gathered their info, use the edit_file tool to update USER.md:",
-			"   - Replace `(your name here)` with their actual name",
-			"   - Replace `(your timezone, e.g., Asia/Kolkata)` with their timezone",
-			"   - Replace `(add your interests)` with their interests",
-			"   - Fill in the Notes section with any other facts they share",
-			"6. Also use edit_file to update memory/MEMORY.md — add a ## Facts section with key user facts.",
-			"7. After updating the files, transition naturally into being helpful with whatever they need.",
+			"5. As soon as you learn the user's name, IMMEDIATELY update USER.md with a SINGLE edit_file call",
+			"   that replaces the entire About block at once. This is critical — if you skip the name, the bot",
+			"   will re-ask on every restart. Example:",
+			"   ```",
+			"   edit_file({",
+			'     path: "USER.md",',
+			'     oldText: "- Name: (your name here)\\n- Timezone: (your timezone, e.g., Asia/Kolkata)\\n- Language: English",',
+			`     newText: "- Name: Alice\\n- Timezone: Asia/Kolkata\\n- Language: English"`,
+			"   })",
+			"   ```",
+			`6. Also update the Preferences section: set preferred channels to "${channel}" and replace interests.`,
+			"7. Use edit_file to update memory/MEMORY.md — add key user facts under ## Facts.",
+			"8. After updating the files, transition naturally into being helpful with whatever they need.",
 		];
 		return lines.join("\n");
 	}
