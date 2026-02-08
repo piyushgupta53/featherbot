@@ -5,4 +5,7 @@ export { ChannelManager } from "./manager.js";
 export type { ChannelManagerOptions } from "./manager.js";
 export { TerminalChannel } from "./terminal.js";
 export type { TerminalChannelOptions } from "./terminal.js";
+export { TelegramChannel } from "./telegram.js";
+export type { TelegramChannelOptions } from "./telegram.js";
+export { escapeTelegramMarkdown } from "./telegram-format.js";
 export type { ChannelOptions, ChannelStatus } from "./types.js";

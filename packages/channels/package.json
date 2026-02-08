@@ -19,7 +19,8 @@
 	},
 	"dependencies": {
 		"@featherbot/bus": "workspace:*",
-		"@featherbot/core": "workspace:*"
+		"@featherbot/core": "workspace:*",
+		"grammy": "^1.39.3"
 	},
 	"devDependencies": {
 		"vitest": "^3.0.4"

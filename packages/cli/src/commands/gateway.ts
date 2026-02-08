@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { MessageBus } from "@featherbot/bus";
-import { BusAdapter, ChannelManager, TerminalChannel } from "@featherbot/channels";
+import { BusAdapter, ChannelManager, TelegramChannel, TerminalChannel } from "@featherbot/channels";
 import {
 	CronTool,
 	createAgentLoop,
@@ -77,8 +77,16 @@ export async function runGateway(): Promise<void> {
 	const adapter = new BusAdapter({ bus, agentLoop });
 	const channelManager = new ChannelManager({ bus });
 	const terminal = new TerminalChannel({ bus });
-
 	channelManager.register(terminal);
+
+	if (config.channels.telegram.enabled && config.channels.telegram.token) {
+		const telegram = new TelegramChannel({
+			bus,
+			token: config.channels.telegram.token,
+			allowFrom: config.channels.telegram.allowFrom,
+		});
+		channelManager.register(telegram);
+	}
 	adapter.start();
 	await channelManager.startAll();
 
@@ -93,6 +101,9 @@ export async function runGateway(): Promise<void> {
 	const channels = channelManager.getChannels().map((ch) => ch.name);
 	console.log("\nFeatherBot gateway running");
 	console.log(`Active channels: ${channels.join(", ")}`);
+	if (config.channels.telegram.enabled) {
+		console.log("Telegram: connected");
+	}
 	if (cronService !== undefined) {
 		console.log("Cron scheduler: enabled");
 	}
