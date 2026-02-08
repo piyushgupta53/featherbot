@@ -354,6 +354,80 @@ describe("ContextBuilder", () => {
 		});
 	});
 
+	describe("memory management instructions", () => {
+		it("includes memory management section when memoryStore has content", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: {
+					getMemoryContext: async () => "Some facts",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("## Memory Management");
+			expect(systemPrompt).toContain("Facts");
+			expect(systemPrompt).toContain("Observed Patterns");
+			expect(systemPrompt).toContain("Pending");
+		});
+
+		it("omits memory management section when memoryStore returns empty", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: {
+					getMemoryContext: async () => "",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).not.toContain("## Memory Management");
+		});
+
+		it("omits memory management section when no memoryStore is provided", async () => {
+			const builder = new ContextBuilder(defaultOptions);
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).not.toContain("## Memory Management");
+		});
+
+		it("memory management appears right after memory section", async () => {
+			const ws = await makeTempWorkspace();
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				memoryStore: {
+					getMemoryContext: async () => "User likes cats",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			const memoryIdx = systemPrompt.indexOf("## Memory");
+			const mgmtIdx = systemPrompt.indexOf("## Memory Management");
+			expect(memoryIdx).toBeGreaterThanOrEqual(0);
+			expect(mgmtIdx).toBeGreaterThan(memoryIdx);
+		});
+
+		it("contains instructions about selective logging", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: {
+					getMemoryContext: async () => "Some memory",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("remember this");
+			expect(systemPrompt).toContain("edit_file");
+			expect(systemPrompt).toContain("Do NOT log every message");
+		});
+	});
+
 	describe("first conversation detection", () => {
 		it("injects first-conversation section when USER.md has placeholder text", async () => {
 			const ws = await makeTempWorkspace();

@@ -52,6 +52,7 @@ export class ContextBuilder {
 		const memorySection = await this.buildMemorySection();
 		if (memorySection) {
 			sections.push(memorySection);
+			sections.push(this.buildMemoryManagementSection());
 		}
 
 		const skillsSection = this.buildSkillsSection();
@@ -89,6 +90,26 @@ export class ContextBuilder {
 			return null;
 		}
 		return `## Memory\n${trimmed}`;
+	}
+
+	private buildMemoryManagementSection(): string {
+		const lines = [
+			"## Memory Management",
+			"You have a memory file at memory/MEMORY.md with sections: Facts, Observed Patterns, and Pending.",
+			"As you converse, selectively update it using edit_file. Only log what matters:",
+			"",
+			"**Facts** — User preferences, personal details, projects, or things they explicitly ask you to remember.",
+			"**Observed Patterns** — Recurring behaviors you notice over multiple conversations (e.g., always asks for concise answers, works late at night, prefers Python over JS).",
+			"**Pending** — Follow-ups, reminders, or things the user mentioned wanting to do later.",
+			"",
+			"Guidelines:",
+			"- Do NOT log every message or trivial details — only meaningful, reusable information.",
+			'- If the user says "remember this" or similar, always persist it.',
+			"- Update existing entries rather than duplicating them.",
+			"- Remove Pending items once they are resolved.",
+			"- For daily context (today's tasks, current mood, etc.), use a daily note at memory/YYYY-MM-DD.md instead.",
+		];
+		return lines.join("\n");
 	}
 
 	private buildSkillsSection(): string | null {
