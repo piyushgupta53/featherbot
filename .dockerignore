@@ -1,0 +1,17 @@
+node_modules/
+.git/
+dist/
+.env*
+.featherbot/
+*.test.ts
+.turbo/
+.vscode/
+.idea/
+.DS_Store
+.claude/
+tasks/
+archive/
+analysis-*.md
+ARCHITECTURE.md
+progress.txt
+prd.json
