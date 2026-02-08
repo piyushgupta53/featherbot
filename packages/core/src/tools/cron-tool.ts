@@ -6,7 +6,7 @@ import type { Tool } from "./types.js";
 export class CronTool implements Tool {
 	readonly name = "cron";
 	readonly description =
-		"Manage scheduled tasks. Create recurring reminders (cron expressions or intervals) and one-time reminders. List, remove, enable, or disable existing jobs.";
+		"Manage scheduled tasks. Use action 'add' with name, message, and a schedule (cronExpr, everySeconds, or at) to create a job. Use 'list' to view jobs, 'remove' with jobId to delete. Listing does NOT create — you must use 'add' to create.";
 	readonly parameters = z.object({
 		action: z
 			.enum(["add", "list", "remove", "enable", "disable"])

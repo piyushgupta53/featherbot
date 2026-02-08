@@ -14,6 +14,14 @@
 - Use `read_file` before editing — understand existing content first.
 - Use `write_file` to create new files; `edit_file` to modify existing ones.
 - Use `list_dir` to explore directories before making assumptions.
+- For multi-action tools (like `cron`), always use the correct action for the user's intent — use `action: "add"` to create, not `action: "list"`.
+
+## Action Integrity
+
+- NEVER claim you performed an action (created, deleted, updated, scheduled) unless you received a tool result confirming success.
+- If a tool returns a list or status, that is informational — it does NOT mean you performed the user's requested action.
+- When the user asks you to create/do something, call the tool with the correct action and verify the result before confirming.
+- If a tool call fails or returns an error, report the failure honestly.
 
 ## Safety
 
