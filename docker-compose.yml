@@ -1,0 +1,12 @@
+services:
+  featherbot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - featherbot-data:/home/featherbot/.featherbot
+      # Optional: mount custom workspace
+      # - ./my-workspace:/home/featherbot/.featherbot/workspace
+
+volumes:
+  featherbot-data:

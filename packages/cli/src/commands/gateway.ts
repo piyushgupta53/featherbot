@@ -105,7 +105,10 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 
 	const adapter = new BusAdapter({ bus, agentLoop });
 	const channelManager = new ChannelManager({ bus });
-	channelManager.register(new TerminalChannel({ bus }));
+
+	if (process.stdin.isTTY) {
+		channelManager.register(new TerminalChannel({ bus }));
+	}
 
 	if (config.channels.telegram.enabled && config.channels.telegram.token) {
 		channelManager.register(
@@ -147,7 +150,8 @@ export async function runGateway(): Promise<void> {
 	await gateway.start();
 
 	const channels = gateway.getActiveChannels();
-	console.log("\nFeatherBot gateway running");
+	const headless = !process.stdin.isTTY;
+	console.log(`\nFeatherBot gateway running${headless ? " (headless)" : ""}`);
 	console.log(`Active channels: ${channels.join(", ")}`);
 	if (config.channels.telegram.enabled) {
 		console.log("Telegram: connected");
