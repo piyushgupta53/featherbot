@@ -69,12 +69,18 @@ export const SessionConfigSchema = z.object({
 	maxMessages: z.number().int().positive().default(50),
 });
 
+export const CronConfigSchema = z.object({
+	enabled: z.boolean().default(true),
+	storePath: z.string().default("~/.featherbot/cron.json"),
+});
+
 export const FeatherBotConfigSchema = z.object({
 	agents: z.object({ defaults: AgentConfigSchema.default({}) }).default({}),
 	channels: ChannelConfigSchema.default({}),
 	providers: ProviderConfigSchema.default({}),
 	tools: ToolConfigSchema.default({}),
 	session: SessionConfigSchema.default({}),
+	cron: CronConfigSchema.default({}),
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
@@ -82,4 +88,5 @@ export type ChannelConfig = z.infer<typeof ChannelConfigSchema>;
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type SessionConfig = z.infer<typeof SessionConfigSchema>;
 export type ToolConfig = z.infer<typeof ToolConfigSchema>;
+export type CronConfig = z.infer<typeof CronConfigSchema>;
 export type FeatherBotConfig = z.infer<typeof FeatherBotConfigSchema>;

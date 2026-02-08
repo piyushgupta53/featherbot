@@ -3,6 +3,7 @@ export const VERSION = "0.0.1";
 export {
 	AgentConfigSchema,
 	ChannelConfigSchema,
+	CronConfigSchema,
 	DEFAULT_BOOTSTRAP_FILES,
 	DiscordChannelConfigSchema,
 	ExecToolConfigSchema,
@@ -18,6 +19,7 @@ export {
 export type {
 	AgentConfig,
 	ChannelConfig,
+	CronConfig,
 	FeatherBotConfig,
 	ProviderConfig,
 	SessionConfig,
@@ -57,6 +59,7 @@ export type {
 } from "./provider/index.js";
 export {
 	createToolRegistry,
+	CronTool,
 	EditFileTool,
 	ExecTool,
 	ListDirTool,

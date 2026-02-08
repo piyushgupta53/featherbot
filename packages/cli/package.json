@@ -28,6 +28,7 @@
 		"@featherbot/bus": "workspace:*",
 		"@featherbot/channels": "workspace:*",
 		"@featherbot/core": "workspace:*",
+		"@featherbot/scheduler": "workspace:*",
 		"commander": "^13.1.0"
 	},
 	"devDependencies": {

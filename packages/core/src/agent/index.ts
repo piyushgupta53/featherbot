@@ -3,6 +3,7 @@ import type { MemoryStore } from "../memory/types.js";
 import { createProvider } from "../provider/index.js";
 import type { SkillsLoader } from "../skills/loader.js";
 import { createToolRegistry } from "../tools/index.js";
+import type { ToolRegistry } from "../tools/registry.js";
 import { AgentLoop } from "./loop.js";
 import type { StepCallback } from "./types.js";
 
@@ -14,10 +15,11 @@ export function createAgentLoop(
 		workspacePath?: string;
 		memoryStore?: MemoryStore;
 		skillsLoader?: SkillsLoader;
+		toolRegistry?: ToolRegistry;
 	},
 ): AgentLoop {
 	const provider = createProvider(config);
-	const toolRegistry = createToolRegistry(config);
+	const toolRegistry = options?.toolRegistry ?? createToolRegistry(config);
 	return new AgentLoop({
 		provider,
 		toolRegistry,
