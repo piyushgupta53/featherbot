@@ -93,7 +93,7 @@ describe("HeartbeatService", () => {
 
 	it("skips when previous onTick is still running (busy flag)", async () => {
 		writeFileSync(filePath, "Task content");
-		let resolveFirst: () => void;
+		let resolveFirst: (() => void) | undefined;
 		const firstPromise = new Promise<void>((r) => {
 			resolveFirst = r;
 		});
