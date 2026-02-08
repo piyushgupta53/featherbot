@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { MessageBus } from "@featherbot/bus";
 import { BusAdapter, ChannelManager, TerminalChannel } from "@featherbot/channels";
 import {
@@ -7,7 +9,7 @@ import {
 	createToolRegistry,
 	loadConfig,
 } from "@featherbot/core";
-import { CronService } from "@featherbot/scheduler";
+import { CronService, HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
 import type { Command } from "commander";
 
 export async function runGateway(): Promise<void> {
@@ -50,6 +52,28 @@ export async function runGateway(): Promise<void> {
 	}
 
 	const agentLoop = createAgentLoop(config, { toolRegistry });
+
+	let heartbeatService: HeartbeatService | undefined;
+
+	if (config.heartbeat.enabled) {
+		const workspace = config.agents.defaults.workspace.startsWith("~")
+			? join(homedir(), config.agents.defaults.workspace.slice(1))
+			: resolve(config.agents.defaults.workspace);
+		const heartbeatFilePath = join(workspace, config.heartbeat.heartbeatFile);
+
+		heartbeatService = new HeartbeatService({
+			intervalMs: config.heartbeat.intervalMs,
+			heartbeatFilePath,
+			onTick: async (content) => {
+				const prompt = buildHeartbeatPrompt(content);
+				await agentLoop.processDirect(prompt, {
+					sessionKey: "system:heartbeat",
+					systemPrompt: prompt,
+				});
+			},
+		});
+	}
+
 	const adapter = new BusAdapter({ bus, agentLoop });
 	const channelManager = new ChannelManager({ bus });
 	const terminal = new TerminalChannel({ bus });
@@ -62,11 +86,19 @@ export async function runGateway(): Promise<void> {
 		cronService.start();
 	}
 
+	if (heartbeatService !== undefined) {
+		heartbeatService.start();
+	}
+
 	const channels = channelManager.getChannels().map((ch) => ch.name);
 	console.log("\nFeatherBot gateway running");
 	console.log(`Active channels: ${channels.join(", ")}`);
 	if (cronService !== undefined) {
 		console.log("Cron scheduler: enabled");
+	}
+	if (heartbeatService !== undefined) {
+		const minutes = Math.round(config.heartbeat.intervalMs / 60000);
+		console.log(`Heartbeat: enabled (every ${minutes}m)`);
 	}
 	console.log("");
 
@@ -75,6 +107,9 @@ export async function runGateway(): Promise<void> {
 		if (shuttingDown) return;
 		shuttingDown = true;
 		console.log("\nShutting down...");
+		if (heartbeatService !== undefined) {
+			heartbeatService.stop();
+		}
 		if (cronService !== undefined) {
 			cronService.stop();
 		}
