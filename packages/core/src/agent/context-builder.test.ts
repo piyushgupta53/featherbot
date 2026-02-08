@@ -50,11 +50,13 @@ describe("ContextBuilder", () => {
 		expect(builder).toBeInstanceOf(ContextBuilder);
 	});
 
-	it("build() returns a ContextBuilderResult with systemPrompt", async () => {
+	it("build() returns a ContextBuilderResult with systemPrompt and isFirstConversation", async () => {
 		const builder = new ContextBuilder(defaultOptions);
 		const result: ContextBuilderResult = await builder.build();
 		expect(result).toHaveProperty("systemPrompt");
 		expect(typeof result.systemPrompt).toBe("string");
+		expect(result).toHaveProperty("isFirstConversation");
+		expect(result.isFirstConversation).toBe(false);
 	});
 
 	it("build() accepts an optional SessionContext", async () => {
@@ -440,10 +442,11 @@ describe("ContextBuilder", () => {
 				workspacePath: ws,
 				bootstrapFiles: ["USER.md"],
 			});
-			const { systemPrompt } = await builder.build();
-			expect(systemPrompt).toContain("## First Conversation");
-			expect(systemPrompt).toContain("introduce yourself");
-			expect(systemPrompt).toContain("edit_file");
+			const result = await builder.build();
+			expect(result.systemPrompt).toContain("## First Conversation");
+			expect(result.systemPrompt).toContain("introduce yourself");
+			expect(result.systemPrompt).toContain("edit_file");
+			expect(result.isFirstConversation).toBe(true);
 		});
 
 		it("does NOT inject when USER.md has real user data", async () => {
@@ -457,8 +460,9 @@ describe("ContextBuilder", () => {
 				workspacePath: ws,
 				bootstrapFiles: ["USER.md"],
 			});
-			const { systemPrompt } = await builder.build();
-			expect(systemPrompt).not.toContain("## First Conversation");
+			const result = await builder.build();
+			expect(result.systemPrompt).not.toContain("## First Conversation");
+			expect(result.isFirstConversation).toBe(false);
 		});
 
 		it("does NOT inject when USER.md is missing", async () => {
@@ -468,8 +472,9 @@ describe("ContextBuilder", () => {
 				workspacePath: ws,
 				bootstrapFiles: ["USER.md"],
 			});
-			const { systemPrompt } = await builder.build();
-			expect(systemPrompt).not.toContain("## First Conversation");
+			const result = await builder.build();
+			expect(result.systemPrompt).not.toContain("## First Conversation");
+			expect(result.isFirstConversation).toBe(false);
 		});
 
 		it("first-conversation section appears after bootstrap files and before memory", async () => {

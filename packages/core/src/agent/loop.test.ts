@@ -578,6 +578,100 @@ describe("AgentLoop", () => {
 			});
 		});
 
+		it("clears stale history once on first message of first-conversation", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(
+				join(ws, "USER.md"),
+				"# User Profile\n\n- Name: (your name here)\n- Timezone: (your timezone)",
+			);
+
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `Response ${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig({ bootstrapFiles: ["USER.md"] }),
+				workspacePath: ws,
+			});
+
+			// First message clears stale history — only system + user
+			await loop.processMessage(makeInbound("hello", { channel: "tg", chatId: "1" }));
+			const opts1 = getCallOpts(generateSpy, 0);
+			expect(opts1.messages.length).toBe(2);
+			expect(opts1.messages[0]?.content).toContain("## First Conversation");
+			expect(opts1.messages[1]).toEqual({ role: "user", content: "hello" });
+		});
+
+		it("preserves onboarding history on subsequent first-conversation messages", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(
+				join(ws, "USER.md"),
+				"# User Profile\n\n- Name: (your name here)\n- Timezone: (your timezone)",
+			);
+
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `Response ${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig({ bootstrapFiles: ["USER.md"] }),
+				workspacePath: ws,
+			});
+
+			// Turn 1: stale history cleared, bot introduces itself
+			await loop.processMessage(makeInbound("hello", { channel: "tg", chatId: "1" }));
+			// Turn 2: USER.md still has placeholders, but history is NOT cleared again
+			await loop.processMessage(makeInbound("I'm Alice", { channel: "tg", chatId: "1" }));
+
+			const opts = getCallOpts(generateSpy, 1);
+			const messages = opts.messages;
+			// system + history(user "hello" + assistant "Response 1") + user "I'm Alice"
+			expect(messages.length).toBe(4);
+			expect(messages[1]).toEqual({ role: "user", content: "hello" });
+			expect(messages[2]).toEqual({ role: "assistant", content: "Response 1" });
+			expect(messages[3]).toEqual({ role: "user", content: "I'm Alice" });
+		});
+
+		it("preserves session history when isFirstConversation is false", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(
+				join(ws, "USER.md"),
+				"# User Profile\n\n- Name: Alice\n- Timezone: America/New_York",
+			);
+
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `Response ${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig({ bootstrapFiles: ["USER.md"] }),
+				workspacePath: ws,
+			});
+
+			await loop.processMessage(makeInbound("hello", { channel: "tg", chatId: "1" }));
+			await loop.processMessage(makeInbound("how are you", { channel: "tg", chatId: "1" }));
+
+			const opts = getCallOpts(generateSpy, 1);
+			const messages = opts.messages;
+			// History preserved: system + user "hello" + assistant "Response 1" + user "how are you"
+			expect(messages.length).toBe(4);
+			expect(messages[1]).toEqual({ role: "user", content: "hello" });
+			expect(messages[2]).toEqual({ role: "assistant", content: "Response 1" });
+			expect(messages[3]).toEqual({ role: "user", content: "how are you" });
+		});
+
 		it("processDirect uses context builder when workspacePath is provided", async () => {
 			const ws = await makeTempWorkspace();
 			const generateSpy = vi.fn<GenerateFn>(async () => makeResult());

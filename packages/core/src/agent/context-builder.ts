@@ -19,6 +19,7 @@ export interface ContextBuilderOptions {
 
 export interface ContextBuilderResult {
 	systemPrompt: string;
+	isFirstConversation: boolean;
 }
 
 export class ContextBuilder {
@@ -45,7 +46,8 @@ export class ContextBuilder {
 			sections.push(section);
 		}
 
-		if (this.isFirstConversation(contentMap)) {
+		const firstConversation = this.isFirstConversation(contentMap);
+		if (firstConversation) {
 			sections.push(this.buildFirstConversationSection());
 		}
 
@@ -65,7 +67,7 @@ export class ContextBuilder {
 			sections.push(sessionSection);
 		}
 
-		return { systemPrompt: sections.join("\n\n") };
+		return { systemPrompt: sections.join("\n\n"), isFirstConversation: firstConversation };
 	}
 
 	private buildIdentityBlock(): string {

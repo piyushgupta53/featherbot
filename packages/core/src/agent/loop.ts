@@ -5,7 +5,7 @@ import { SessionStore } from "../session/session-store.js";
 import { SqliteHistory } from "../session/sqlite-history.js";
 import type { InboundMessage, SessionKey } from "../types.js";
 import { ContextBuilder } from "./context-builder.js";
-import type { SessionContext } from "./context-builder.js";
+import type { ContextBuilderResult, SessionContext } from "./context-builder.js";
 import { InMemoryHistory } from "./history.js";
 import { buildToolMap } from "./tool-bridge.js";
 import type { AgentLoopOptions, AgentLoopResult, ConversationHistory, StepEvent } from "./types.js";
@@ -15,6 +15,7 @@ const DEFAULT_SYSTEM_PROMPT = "You are FeatherBot, a helpful AI assistant.";
 export class AgentLoop {
 	private readonly options: AgentLoopOptions;
 	private readonly sessions = new Map<SessionKey, ConversationHistory>();
+	private readonly firstConversationCleared = new Set<SessionKey>();
 	private readonly systemPrompt: string;
 	private readonly contextBuilder?: ContextBuilder;
 	private readonly db?: Database.Database;
@@ -47,8 +48,8 @@ export class AgentLoop {
 			channelName: inbound.channel,
 			chatId: inbound.chatId,
 		};
-		const prompt = await this.resolveSystemPrompt(this.systemPrompt, sessionContext);
-		return this.run(sessionKey, inbound.content, prompt);
+		const ctx = await this.resolveContext(this.systemPrompt, sessionContext);
+		return this.run(sessionKey, inbound.content, ctx);
 	}
 
 	async processDirect(
@@ -57,8 +58,8 @@ export class AgentLoop {
 	): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = (options?.sessionKey as SessionKey) ?? "direct:default";
 		const staticPrompt = options?.systemPrompt ?? this.systemPrompt;
-		const prompt = await this.resolveSystemPrompt(staticPrompt);
-		return this.run(sessionKey, message, prompt);
+		const ctx = await this.resolveContext(staticPrompt);
+		return this.run(sessionKey, message, ctx);
 	}
 
 	private getOrCreateHistory(sessionKey: SessionKey): ConversationHistory {
@@ -77,29 +78,34 @@ export class AgentLoop {
 		return history;
 	}
 
-	private async resolveSystemPrompt(
+	private async resolveContext(
 		fallback: string,
 		sessionContext?: SessionContext,
-	): Promise<string> {
+	): Promise<ContextBuilderResult> {
 		if (this.contextBuilder === undefined) {
-			return fallback;
+			return { systemPrompt: fallback, isFirstConversation: false };
 		}
-		const result = await this.contextBuilder.build(sessionContext);
-		return result.systemPrompt;
+		return this.contextBuilder.build(sessionContext);
 	}
 
 	private async run(
 		sessionKey: SessionKey,
 		userContent: string,
-		systemPrompt: string,
+		ctx: ContextBuilderResult,
 	): Promise<AgentLoopResult> {
 		const history = this.getOrCreateHistory(sessionKey);
+
+		if (ctx.isFirstConversation && !this.firstConversationCleared.has(sessionKey)) {
+			history.clear();
+			this.firstConversationCleared.add(sessionKey);
+		}
+
 		const { provider, toolRegistry, config } = this.options;
 
 		const toolMap = buildToolMap(toolRegistry);
 
 		const messages: LLMMessage[] = [
-			{ role: "system", content: systemPrompt },
+			{ role: "system", content: ctx.systemPrompt },
 			...history.getMessages(),
 			{ role: "user", content: userContent },
 		];
