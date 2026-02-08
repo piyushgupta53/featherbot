@@ -57,6 +57,7 @@ export type {
 } from "./provider/index.js";
 export {
 	createToolRegistry,
+	CronTool,
 	EditFileTool,
 	ExecTool,
 	ListDirTool,

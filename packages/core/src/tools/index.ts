@@ -27,6 +27,7 @@ export function createToolRegistry(config: FeatherBotConfig): ToolRegistry {
 	return registry;
 }
 
+export { CronTool } from "./cron-tool.js";
 export { EditFileTool } from "./edit-file-tool.js";
 export type { EditFileToolOptions } from "./edit-file-tool.js";
 export { ExecTool } from "./exec-tool.js";
