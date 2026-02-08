@@ -90,7 +90,11 @@ importers:
         specifier: ^7.6.13
         version: 7.6.13
 
-  packages/scheduler: {}
+  packages/scheduler:
+    dependencies:
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
 
 packages:
 
