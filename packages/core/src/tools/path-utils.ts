@@ -7,19 +7,24 @@ export interface PathValidationResult {
 	error?: string;
 }
 
+function expandTilde(p: string): string {
+	return p.startsWith("~") ? p.replace("~", homedir()) : p;
+}
+
 export function resolvePath(inputPath: string, workspaceDir: string): string {
-	const expanded = inputPath.startsWith("~") ? inputPath.replace("~", homedir()) : inputPath;
+	const expanded = expandTilde(inputPath);
+	const expandedWorkspace = expandTilde(workspaceDir);
 
 	if (isAbsolute(expanded)) {
 		return resolve(expanded);
 	}
 
-	return resolve(workspaceDir, expanded);
+	return resolve(expandedWorkspace, expanded);
 }
 
 export function isWithinWorkspace(absolutePath: string, workspaceDir: string): boolean {
 	const normalizedPath = resolve(absolutePath);
-	const normalizedWorkspace = resolve(workspaceDir);
+	const normalizedWorkspace = resolve(expandTilde(workspaceDir));
 
 	return (
 		normalizedPath === normalizedWorkspace || normalizedPath.startsWith(normalizedWorkspace + sep)

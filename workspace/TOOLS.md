@@ -20,9 +20,9 @@ Example: `write_file({ path: "hello.txt", content: "Hello world" })`
 
 ## edit_file
 
-Edit a specific range of lines in a file.
+Edit a file by replacing an exact text match. The old text must appear exactly once.
 
-Example: `edit_file({ path: "config.json", startLine: 3, endLine: 5, content: "new content" })`
+Example: `edit_file({ path: "USER.md", oldText: "- Name: (your name here)", newText: "- Name: Alice" })`
 
 ## list_dir
 

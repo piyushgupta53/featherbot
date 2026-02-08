@@ -102,3 +102,38 @@ describe("validatePath", () => {
 		}
 	});
 });
+
+describe("tilde in workspaceDir", () => {
+	const TILDE_WORKSPACE = "~/.featherbot/workspace";
+	const EXPANDED_WORKSPACE = resolve(homedir(), ".featherbot/workspace");
+
+	it("resolvePath expands ~ in workspaceDir for relative paths", () => {
+		expect(resolvePath("USER.md", TILDE_WORKSPACE)).toBe(`${EXPANDED_WORKSPACE}/USER.md`);
+	});
+
+	it("resolvePath expands ~ in workspaceDir for nested relative paths", () => {
+		expect(resolvePath("memory/MEMORY.md", TILDE_WORKSPACE)).toBe(
+			`${EXPANDED_WORKSPACE}/memory/MEMORY.md`,
+		);
+	});
+
+	it("isWithinWorkspace returns true for paths inside tilde workspace", () => {
+		expect(isWithinWorkspace(`${EXPANDED_WORKSPACE}/USER.md`, TILDE_WORKSPACE)).toBe(true);
+	});
+
+	it("isWithinWorkspace returns false for paths outside tilde workspace", () => {
+		expect(isWithinWorkspace("/etc/passwd", TILDE_WORKSPACE)).toBe(false);
+	});
+
+	it("validatePath resolves relative path against tilde workspace", () => {
+		const result = validatePath("USER.md", TILDE_WORKSPACE, true);
+		expect(result.valid).toBe(true);
+		expect(result.resolved).toBe(`${EXPANDED_WORKSPACE}/USER.md`);
+	});
+
+	it("validatePath blocks traversal out of tilde workspace", () => {
+		const result = validatePath("../../../etc/passwd", TILDE_WORKSPACE, true);
+		expect(result.valid).toBe(false);
+		expect(result.error).toContain("outside the workspace");
+	});
+});
