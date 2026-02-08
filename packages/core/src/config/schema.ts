@@ -25,7 +25,8 @@ export const TelegramChannelConfigSchema = z.object({
 
 export const WhatsAppChannelConfigSchema = z.object({
 	enabled: z.boolean().default(false),
-	bridgeUrl: z.string().default("ws://localhost:3001"),
+	allowFrom: z.array(z.string()).default([]),
+	authDir: z.string().default("~/.featherbot/whatsapp-auth"),
 });
 
 export const DiscordChannelConfigSchema = z.object({
@@ -92,6 +93,7 @@ export const FeatherBotConfigSchema = z.object({
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 export type ChannelConfig = z.infer<typeof ChannelConfigSchema>;
+export type WhatsAppConfig = z.infer<typeof WhatsAppChannelConfigSchema>;
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type SessionConfig = z.infer<typeof SessionConfigSchema>;
 export type ToolConfig = z.infer<typeof ToolConfigSchema>;

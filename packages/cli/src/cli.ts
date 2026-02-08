@@ -3,6 +3,7 @@ import { registerAgent } from "./commands/agent.js";
 import { registerGateway } from "./commands/gateway.js";
 import { registerOnboard } from "./commands/onboard.js";
 import { registerStatus } from "./commands/status.js";
+import { registerWhatsApp } from "./commands/whatsapp.js";
 import { VERSION } from "./index.js";
 
 export const program = new Command();
@@ -13,3 +14,4 @@ registerOnboard(program);
 registerAgent(program);
 registerStatus(program);
 registerGateway(program);
+registerWhatsApp(program);

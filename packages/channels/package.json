@@ -20,7 +20,9 @@
 	"dependencies": {
 		"@featherbot/bus": "workspace:*",
 		"@featherbot/core": "workspace:*",
-		"grammy": "^1.39.3"
+		"@whiskeysockets/baileys": "7.0.0-rc.9",
+		"grammy": "^1.39.3",
+		"qrcode-terminal": "^0.12.0"
 	},
 	"devDependencies": {
 		"vitest": "^3.0.4"

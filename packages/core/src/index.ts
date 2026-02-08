@@ -26,6 +26,7 @@ export type {
 	ProviderConfig,
 	SessionConfig,
 	ToolConfig,
+	WhatsAppConfig,
 } from "./config/schema.js";
 export { loadConfig } from "./config/loader.js";
 export type {

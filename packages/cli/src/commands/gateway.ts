@@ -1,7 +1,13 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { MessageBus } from "@featherbot/bus";
-import { BusAdapter, ChannelManager, TelegramChannel, TerminalChannel } from "@featherbot/channels";
+import {
+	BusAdapter,
+	ChannelManager,
+	TelegramChannel,
+	TerminalChannel,
+	WhatsAppChannel,
+} from "@featherbot/channels";
 import {
 	CronTool,
 	createAgentLoop,
@@ -87,6 +93,19 @@ export async function runGateway(): Promise<void> {
 		});
 		channelManager.register(telegram);
 	}
+
+	if (config.channels.whatsapp.enabled) {
+		const authDir = config.channels.whatsapp.authDir.startsWith("~")
+			? join(homedir(), config.channels.whatsapp.authDir.slice(1))
+			: resolve(config.channels.whatsapp.authDir);
+		const whatsapp = new WhatsAppChannel({
+			bus,
+			authDir,
+			allowFrom: config.channels.whatsapp.allowFrom,
+		});
+		channelManager.register(whatsapp);
+	}
+
 	adapter.start();
 	await channelManager.startAll();
 
@@ -103,6 +122,9 @@ export async function runGateway(): Promise<void> {
 	console.log(`Active channels: ${channels.join(", ")}`);
 	if (config.channels.telegram.enabled) {
 		console.log("Telegram: connected");
+	}
+	if (config.channels.whatsapp.enabled) {
+		console.log("WhatsApp: connected");
 	}
 	if (cronService !== undefined) {
 		console.log("Cron scheduler: enabled");

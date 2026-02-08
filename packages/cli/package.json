@@ -29,6 +29,7 @@
 		"@featherbot/channels": "workspace:*",
 		"@featherbot/core": "workspace:*",
 		"@featherbot/scheduler": "workspace:*",
+		"@whiskeysockets/baileys": "7.0.0-rc.9",
 		"commander": "^13.1.0"
 	},
 	"devDependencies": {
