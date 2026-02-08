@@ -166,8 +166,8 @@ function resolveTemplateDir(): string {
 	const currentFile = fileURLToPath(import.meta.url);
 	const currentDir = dirname(currentFile);
 	const candidates = [
-		resolve(currentDir, "..", "..", "..", "..", "workspace"),
-		resolve(currentDir, "..", "..", "workspace"),
+		resolve(currentDir, "..", "..", "..", "..", "workspace"), // from src/commands/
+		resolve(currentDir, "..", "..", "..", "workspace"), // from dist/ (built)
 	];
 	for (const candidate of candidates) {
 		if (existsSync(candidate)) {
