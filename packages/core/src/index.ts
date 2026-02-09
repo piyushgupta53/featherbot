@@ -14,6 +14,7 @@ export {
 	SessionConfigSchema,
 	SubagentConfigSchema,
 	TelegramChannelConfigSchema,
+	TranscriptionConfigSchema,
 	ToolConfigSchema,
 	WebSearchToolConfigSchema,
 	WhatsAppChannelConfigSchema,
@@ -28,6 +29,7 @@ export type {
 	SessionConfig,
 	SubagentConfig,
 	ToolConfig,
+	TranscriptionConfig,
 	WhatsAppConfig,
 } from "./config/schema.js";
 export { loadConfig } from "./config/loader.js";
@@ -139,6 +141,8 @@ export {
 	SqliteHistory,
 } from "./session/index.js";
 export type { SessionRecord } from "./session/index.js";
+export { Transcriber } from "./transcription/index.js";
+export type { TranscriptionResult } from "./transcription/index.js";
 export { Gateway } from "./gateway/index.js";
 export type {
 	GatewayAdapter,

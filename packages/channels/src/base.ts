@@ -1,15 +1,17 @@
 import type { InboundMessage, MessageBus, OutboundMessage } from "@featherbot/bus";
-import type { ChannelOptions } from "./types.js";
+import type { AudioTranscriber, ChannelOptions } from "./types.js";
 
 export abstract class BaseChannel {
 	abstract readonly name: string;
 
 	protected readonly bus: MessageBus;
+	protected readonly transcriber: AudioTranscriber | undefined;
 	private readonly allowFrom: string[];
 
 	constructor(options: ChannelOptions) {
 		this.bus = options.bus;
 		this.allowFrom = options.allowFrom ?? [];
+		this.transcriber = options.transcriber;
 	}
 
 	abstract start(): Promise<void>;

@@ -13,8 +13,14 @@ const handlers: Map<string, Handler> = new Map();
 
 vi.mock("grammy", () => ({
 	Bot: vi.fn().mockImplementation(() => ({
-		on: (filter: string, handler: Handler) => {
-			handlers.set(filter, handler);
+		on: (filter: string | string[], handler: Handler) => {
+			if (Array.isArray(filter)) {
+				for (const f of filter) {
+					handlers.set(f, handler);
+				}
+			} else {
+				handlers.set(filter, handler);
+			}
 		},
 		start: mockStart,
 		stop: mockStop,
@@ -23,6 +29,8 @@ vi.mock("grammy", () => ({
 		},
 	})),
 }));
+
+const mockFetch = vi.fn();
 
 function makeTextCtx(userId: number, chatId: number, text: string, messageId = 1) {
 	return {
@@ -50,9 +58,29 @@ function makePhotoCtx(
 	};
 }
 
+function makeVoiceCtx(
+	userId: number,
+	chatId: number,
+	duration: number,
+	messageId = 1,
+	mimeType = "audio/ogg",
+) {
+	return {
+		from: { id: userId },
+		chat: { id: chatId },
+		message: {
+			voice: { duration, mime_type: mimeType },
+			audio: undefined,
+			message_id: messageId,
+		},
+		getFile: vi.fn().mockResolvedValue({ file_path: "voice/file_0.oga" }),
+	};
+}
+
 describe("TelegramChannel", () => {
 	let bus: MessageBus;
 	let channel: TelegramChannel;
+	let originalFetch: typeof globalThis.fetch;
 
 	beforeEach(() => {
 		bus = new MessageBus();
@@ -60,10 +88,14 @@ describe("TelegramChannel", () => {
 		mockSendMessage.mockReset();
 		mockStart.mockReset();
 		mockStop.mockReset();
+		mockFetch.mockReset();
+		originalFetch = globalThis.fetch;
+		globalThis.fetch = mockFetch;
 	});
 
 	afterEach(() => {
 		bus.close();
+		globalThis.fetch = originalFetch;
 	});
 
 	it("has name 'telegram'", () => {
@@ -279,5 +311,97 @@ describe("TelegramChannel", () => {
 		channel = new TelegramChannel({ bus, token: "test-token" });
 		// Should not throw
 		await channel.stop();
+	});
+
+	it("transcribes voice message when transcriber is configured", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn().mockResolvedValue({ text: "hello from voice" }),
+		};
+		channel = new TelegramChannel({ bus, token: "test-token", transcriber: mockTranscriber });
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		mockFetch.mockResolvedValue({
+			arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+		});
+
+		await channel.start();
+
+		const handler = handlers.get("message:voice");
+		expect(handler).toBeDefined();
+		await handler?.(makeVoiceCtx(123, 456, 10));
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe("[Voice transcription]: hello from voice");
+	});
+
+	it("sends placeholder when no transcriber is configured for voice", async () => {
+		channel = new TelegramChannel({ bus, token: "test-token" });
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		await channel.start();
+
+		const handler = handlers.get("message:voice");
+		expect(handler).toBeDefined();
+		await handler?.(makeVoiceCtx(123, 456, 10));
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe(
+			"[Voice message received, but transcription is not configured]",
+		);
+	});
+
+	it("sends fallback when voice transcription fails", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn().mockRejectedValue(new Error("API error")),
+		};
+		channel = new TelegramChannel({ bus, token: "test-token", transcriber: mockTranscriber });
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		mockFetch.mockResolvedValue({
+			arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+		});
+
+		await channel.start();
+
+		const handler = handlers.get("message:voice");
+		await handler?.(makeVoiceCtx(123, 456, 10));
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe("[Voice message received, but transcription failed]");
+		consoleSpy.mockRestore();
+	});
+
+	it("rejects voice message exceeding duration limit", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn(),
+		};
+		channel = new TelegramChannel({ bus, token: "test-token", transcriber: mockTranscriber });
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		await channel.start();
+
+		const handler = handlers.get("message:voice");
+		await handler?.(makeVoiceCtx(123, 456, 300));
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toContain("[Voice message rejected: duration 300s");
+		expect(mockTranscriber.transcribe).not.toHaveBeenCalled();
 	});
 });

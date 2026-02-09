@@ -8,7 +8,7 @@ export type { TerminalChannelOptions } from "./terminal.js";
 export { TelegramChannel } from "./telegram.js";
 export type { TelegramChannelOptions } from "./telegram.js";
 export { escapeTelegramMarkdown } from "./telegram-format.js";
-export type { ChannelOptions, ChannelStatus } from "./types.js";
+export type { AudioTranscriber, ChannelOptions, ChannelStatus } from "./types.js";
 export { WhatsAppChannel } from "./whatsapp.js";
 export type { WhatsAppChannelOptions } from "./whatsapp.js";
 export { extractWhatsAppText } from "./whatsapp-message.js";

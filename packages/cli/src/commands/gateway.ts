@@ -15,6 +15,7 @@ import {
 	SpawnTool,
 	SubagentManager,
 	SubagentStatusTool,
+	Transcriber,
 	checkStartupConfig,
 	createAgentLoop,
 	createMemoryStore,
@@ -144,6 +145,11 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		});
 	}
 
+	const transcriber =
+		config.transcription.enabled && config.transcription.apiKey !== ""
+			? new Transcriber(config.transcription)
+			: undefined;
+
 	const adapter = new BusAdapter({ bus, agentLoop });
 	const channelManager = new ChannelManager({ bus });
 
@@ -157,6 +163,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 				bus,
 				token: config.channels.telegram.token,
 				allowFrom: config.channels.telegram.allowFrom,
+				transcriber,
 			}),
 		);
 	}
@@ -167,6 +174,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 				bus,
 				authDir: resolveHome(config.channels.whatsapp.authDir),
 				allowFrom: config.channels.whatsapp.allowFrom,
+				transcriber,
 			}),
 		);
 	}
@@ -221,6 +229,9 @@ export async function runGateway(): Promise<void> {
 	if (config.heartbeat.enabled) {
 		const minutes = Math.round(config.heartbeat.intervalMs / 60000);
 		console.log(`Heartbeat: enabled (every ${minutes}m)`);
+	}
+	if (config.transcription.enabled && config.transcription.apiKey !== "") {
+		console.log(`Voice transcription: enabled (${config.transcription.provider})`);
 	}
 	console.log("Sub-agents: enabled");
 	console.log("");

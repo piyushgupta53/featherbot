@@ -96,6 +96,14 @@ export const SubagentConfigSchema = z.object({
 	timeoutMs: z.number().int().positive().default(300000),
 });
 
+export const TranscriptionConfigSchema = z.object({
+	enabled: z.boolean().default(false),
+	provider: z.enum(["groq", "openai"]).default("groq"),
+	apiKey: z.string().default(""),
+	model: z.string().default(""),
+	maxDurationSeconds: z.number().int().positive().default(120),
+});
+
 export const FeatherBotConfigSchema = z.object({
 	agents: z.object({ defaults: AgentConfigSchema.default({}) }).default({}),
 	channels: ChannelConfigSchema.default({}),
@@ -105,6 +113,7 @@ export const FeatherBotConfigSchema = z.object({
 	cron: CronConfigSchema.default({}),
 	heartbeat: HeartbeatConfigSchema.default({}),
 	subagent: SubagentConfigSchema.default({}),
+	transcription: TranscriptionConfigSchema.default({}),
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
@@ -116,5 +125,6 @@ export type ToolConfig = z.infer<typeof ToolConfigSchema>;
 export type CronConfig = z.infer<typeof CronConfigSchema>;
 export type HeartbeatConfig = z.infer<typeof HeartbeatConfigSchema>;
 export type SubagentConfig = z.infer<typeof SubagentConfigSchema>;
+export type TranscriptionConfig = z.infer<typeof TranscriptionConfigSchema>;
 export type WebFetchToolConfig = z.infer<typeof WebFetchToolConfigSchema>;
 export type FeatherBotConfig = z.infer<typeof FeatherBotConfigSchema>;

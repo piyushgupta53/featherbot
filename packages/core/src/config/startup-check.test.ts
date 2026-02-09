@@ -36,6 +36,13 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 		cron: { enabled: false, storePath: "" },
 		heartbeat: { enabled: false, intervalMs: 1800000, heartbeatFile: "HEARTBEAT.md" },
 		subagent: { maxIterations: 15, timeoutMs: 300000 },
+		transcription: {
+			enabled: false,
+			provider: "groq" as const,
+			apiKey: "",
+			model: "",
+			maxDurationSeconds: 120,
+		},
 		...overrides,
 	};
 }

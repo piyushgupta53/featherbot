@@ -110,6 +110,29 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 		const braveAnswer = await rl.question("Brave Search API key (Enter to skip): ");
 		braveApiKey = braveAnswer.trim();
 
+		// Step 8: Voice transcription (only if a messaging channel is enabled)
+		let transcriptionEnabled = false;
+		let transcriptionProvider: "groq" | "openai" = "groq";
+		let transcriptionApiKey = "";
+		if (telegramEnabled || whatsappEnabled) {
+			output.write("\nVoice transcription lets your agent understand voice messages.\n");
+			output.write("Uses Whisper via Groq (free tier available) or OpenAI.\n");
+			const transcribeAnswer = await rl.question("Enable voice transcription? (y/N) ");
+			if (transcribeAnswer.trim().toLowerCase() === "y") {
+				transcriptionEnabled = true;
+				output.write("Choose transcription provider:\n");
+				output.write("  1. Groq (faster, free tier)\n");
+				output.write("  2. OpenAI\n");
+				const providerAnswer = await rl.question("Provider [1]: ");
+				if (providerAnswer.trim() === "2") {
+					transcriptionProvider = "openai";
+				}
+				transcriptionApiKey = (
+					await rl.question(`${transcriptionProvider === "groq" ? "Groq" : "OpenAI"} API key: `)
+				).trim();
+			}
+		}
+
 		// Build config
 		const config = FeatherBotConfigSchema.parse({
 			providers: {
@@ -135,6 +158,11 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 						apiKey: braveApiKey,
 					},
 				},
+			},
+			transcription: {
+				enabled: transcriptionEnabled,
+				provider: transcriptionProvider,
+				apiKey: transcriptionApiKey,
 			},
 		});
 

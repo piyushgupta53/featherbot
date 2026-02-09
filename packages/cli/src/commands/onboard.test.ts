@@ -50,7 +50,7 @@ describe("runOnboard", () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
-	// Flow: apiKey → confirm detection → model → telegram → whatsapp → brave key
+	// Flow: apiKey → confirm detection → model → telegram → whatsapp → brave key → [voice transcription if tg/wa enabled]
 	it("creates config with auto-detected anthropic provider", async () => {
 		const { input, output } = createStreams(["sk-ant-test-key-123", "y", "1", "n", "n", ""]);
 		const configDir = join(testDir, "config");
@@ -181,7 +181,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables telegram when user says yes", async () => {
-		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", ""]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", "", "n"]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -199,7 +199,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables whatsapp and shows login reminder", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", ""]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", "", "n"]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -231,6 +231,55 @@ describe("runOnboard", () => {
 
 		const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf-8"));
 		expect(config.tools.web.search.apiKey).toBe("BSA-test-key");
+	});
+
+	it("enables voice transcription with groq when user says yes", async () => {
+		const { input, output } = createStreams([
+			"sk-ant-key",
+			"y",
+			"1",
+			"y",
+			"123:ABC",
+			"n",
+			"",
+			"y",
+			"1",
+			"gsk_test-groq-key",
+		]);
+		const configDir = join(testDir, "config");
+		const workspaceDir = join(testDir, "workspace");
+
+		await runOnboard({
+			configDir,
+			workspaceDir,
+			templateDir: resolve(process.cwd(), "..", "..", "workspace"),
+			input,
+			output,
+		});
+
+		const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf-8"));
+		expect(config.transcription.enabled).toBe(true);
+		expect(config.transcription.provider).toBe("groq");
+		expect(config.transcription.apiKey).toBe("gsk_test-groq-key");
+	});
+
+	it("skips voice transcription when no messaging channel enabled", async () => {
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", ""]);
+		const configDir = join(testDir, "config");
+		const workspaceDir = join(testDir, "workspace");
+
+		await runOnboard({
+			configDir,
+			workspaceDir,
+			templateDir: resolve(process.cwd(), "..", "..", "workspace"),
+			input,
+			output,
+		});
+
+		const out = getOutput();
+		expect(out).not.toContain("voice transcription");
+		const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf-8"));
+		expect(config.transcription.enabled).toBe(false);
 	});
 
 	it("prints success message with next steps", async () => {

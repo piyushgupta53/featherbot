@@ -6,12 +6,15 @@ import { WhatsAppChannel } from "./whatsapp.js";
 // biome-ignore lint/suspicious/noExplicitAny: mock handler types
 type Handler = (...args: any[]) => void;
 
-const { mockSendMessage, mockEnd, evHandlers, mockSaveCreds } = vi.hoisted(() => ({
-	mockSendMessage: vi.fn(),
-	mockEnd: vi.fn(),
-	evHandlers: new Map<string, Handler>(),
-	mockSaveCreds: vi.fn(),
-}));
+const { mockSendMessage, mockEnd, evHandlers, mockSaveCreds, mockDownloadMedia } = vi.hoisted(
+	() => ({
+		mockSendMessage: vi.fn(),
+		mockEnd: vi.fn(),
+		evHandlers: new Map<string, Handler>(),
+		mockSaveCreds: vi.fn(),
+		mockDownloadMedia: vi.fn(),
+	}),
+);
 
 vi.mock("@whiskeysockets/baileys", () => ({
 	useMultiFileAuthState: vi.fn().mockResolvedValue({
@@ -27,6 +30,7 @@ vi.mock("@whiskeysockets/baileys", () => ({
 		sendMessage: mockSendMessage,
 		end: mockEnd,
 	})),
+	downloadMediaMessage: mockDownloadMedia,
 }));
 
 function makeMessage(
@@ -52,6 +56,7 @@ describe("WhatsAppChannel", () => {
 		mockSendMessage.mockReset();
 		mockEnd.mockReset();
 		mockSaveCreds.mockReset();
+		mockDownloadMedia.mockReset();
 	});
 
 	afterEach(() => {
@@ -330,5 +335,129 @@ describe("WhatsAppChannel", () => {
 		});
 
 		expect(events).toHaveLength(0);
+	});
+
+	it("transcribes audio message when transcriber is configured", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn().mockResolvedValue({ text: "hello from voice" }),
+		};
+		channel = new WhatsAppChannel({
+			bus,
+			authDir: "/tmp/wa-auth",
+			transcriber: mockTranscriber,
+		});
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		mockDownloadMedia.mockResolvedValue(Buffer.from("audio-data"));
+
+		await channel.start();
+
+		const handler = evHandlers.get("messages.upsert");
+		await handler?.({
+			messages: [
+				makeMessage("1234567890@s.whatsapp.net", {
+					audioMessage: { seconds: 5, mimetype: "audio/ogg; codecs=opus" },
+				}),
+			],
+			type: "notify",
+		});
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe("[Voice transcription]: hello from voice");
+	});
+
+	it("falls back to placeholder when no transcriber for audio", async () => {
+		channel = new WhatsAppChannel({ bus, authDir: "/tmp/wa-auth" });
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		await channel.start();
+
+		const handler = evHandlers.get("messages.upsert");
+		await handler?.({
+			messages: [
+				makeMessage("1234567890@s.whatsapp.net", {
+					audioMessage: { seconds: 5, mimetype: "audio/ogg" },
+				}),
+			],
+			type: "notify",
+		});
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe("[Voice Message]");
+	});
+
+	it("falls back to placeholder when audio transcription fails", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn().mockRejectedValue(new Error("API error")),
+		};
+		channel = new WhatsAppChannel({
+			bus,
+			authDir: "/tmp/wa-auth",
+			transcriber: mockTranscriber,
+		});
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		mockDownloadMedia.mockResolvedValue(Buffer.from("audio-data"));
+
+		await channel.start();
+
+		const handler = evHandlers.get("messages.upsert");
+		await handler?.({
+			messages: [
+				makeMessage("1234567890@s.whatsapp.net", {
+					audioMessage: { seconds: 5, mimetype: "audio/ogg" },
+				}),
+			],
+			type: "notify",
+		});
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toBe("[Voice Message]");
+		consoleSpy.mockRestore();
+	});
+
+	it("rejects audio message exceeding duration limit", async () => {
+		const mockTranscriber = {
+			transcribe: vi.fn(),
+		};
+		channel = new WhatsAppChannel({
+			bus,
+			authDir: "/tmp/wa-auth",
+			transcriber: mockTranscriber,
+		});
+
+		const events: InboundMessageEvent[] = [];
+		bus.subscribe("message:inbound", (event) => {
+			events.push(event);
+		});
+
+		await channel.start();
+
+		const handler = evHandlers.get("messages.upsert");
+		await handler?.({
+			messages: [
+				makeMessage("1234567890@s.whatsapp.net", {
+					audioMessage: { seconds: 300, mimetype: "audio/ogg" },
+				}),
+			],
+			type: "notify",
+		});
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.message.content).toContain("[Voice message rejected: duration 300s");
+		expect(mockTranscriber.transcribe).not.toHaveBeenCalled();
 	});
 });

@@ -1,9 +1,16 @@
 import { createInboundMessage } from "@featherbot/bus";
 import type { OutboundMessage } from "@featherbot/bus";
-import { type WASocket, makeWASocket, useMultiFileAuthState } from "@whiskeysockets/baileys";
+import {
+	type WASocket,
+	downloadMediaMessage,
+	makeWASocket,
+	useMultiFileAuthState,
+} from "@whiskeysockets/baileys";
 import { BaseChannel } from "./base.js";
 import type { ChannelOptions } from "./types.js";
 import { extractWhatsAppText } from "./whatsapp-message.js";
+
+const MAX_VOICE_DURATION_SECONDS = 120;
 
 export interface WhatsAppChannelOptions extends ChannelOptions {
 	authDir: string;
@@ -80,11 +87,51 @@ export class WhatsAppChannel extends BaseChannel {
 					if (remoteJid === "status@broadcast") continue;
 					if (remoteJid.endsWith("@g.us")) continue;
 
-					const text = extractWhatsAppText(msg.message);
-					if (text === null) continue;
-
 					const phone = remoteJid.split("@")[0] ?? remoteJid;
 					const senderId = `whatsapp:${phone}`;
+
+					// Handle audio/voice messages
+					const audioMsg = msg.message?.audioMessage;
+					if (audioMsg !== null && audioMsg !== undefined && this.transcriber !== undefined) {
+						const duration = audioMsg.seconds ?? 0;
+						if (duration > MAX_VOICE_DURATION_SECONDS) {
+							const inbound = createInboundMessage({
+								channel: "whatsapp",
+								senderId,
+								chatId: remoteJid,
+								content: `[Voice message rejected: duration ${duration}s exceeds ${MAX_VOICE_DURATION_SECONDS}s limit]`,
+								media: [],
+								metadata: { whatsappMessageId: msg.key.id ?? "" },
+							});
+							await this.publishInbound(inbound);
+							continue;
+						}
+
+						try {
+							const buffer = (await downloadMediaMessage(msg, "buffer", {})) as Buffer;
+							const mimeType = audioMsg.mimetype ?? "audio/ogg";
+							const filename = `voice.${mimeType.includes("ogg") ? "ogg" : "mp4"}`;
+
+							const result = await this.transcriber.transcribe(buffer, filename, mimeType);
+
+							const inbound = createInboundMessage({
+								channel: "whatsapp",
+								senderId,
+								chatId: remoteJid,
+								content: `[Voice transcription]: ${result.text}`,
+								media: [],
+								metadata: { whatsappMessageId: msg.key.id ?? "" },
+							});
+							await this.publishInbound(inbound);
+							continue;
+						} catch (transcribeErr) {
+							console.error("WhatsApp voice transcription error:", transcribeErr);
+							// Fall through to extractWhatsAppText
+						}
+					}
+
+					const text = extractWhatsAppText(msg.message);
+					if (text === null) continue;
 
 					const inbound = createInboundMessage({
 						channel: "whatsapp",
