@@ -13,6 +13,7 @@ A personal AI agent framework built with TypeScript. Connects to messaging platf
 - **Session management** — SQLite-backed conversation history with message trimming
 - **Cron & heartbeat** — Scheduled tasks, one-time reminders, and periodic self-reflection
 - **Voice transcription** — Groq or OpenAI Whisper for voice messages in Telegram/WhatsApp
+- **Message batching** — Per-session debounce and serialization to prevent race conditions and reduce LLM costs
 - **Context builder** — 5-layer system prompt (identity, bootstrap files, memory, skills, session)
 - **Docker support** — Multi-stage build, docker-compose, headless mode
 
@@ -119,6 +120,14 @@ Skills are markdown-driven plugins loaded from the workspace. FeatherBot uses a 
 
 Custom skills can be added to `~/.featherbot/workspace/skills/` or per-workspace in `skills/`.
 
+## Message Batching
+
+When a user sends multiple messages in quick succession (e.g. "check my calendar" / "actually wait" / "check tomorrow not today"), FeatherBot batches them into a single LLM call instead of firing three independent requests. This prevents race conditions on shared conversation history, reduces API costs, and produces one coherent response.
+
+- **Debounce** — 2-second window (configurable) resets on each new message
+- **Serialize** — Only one LLM call per session at a time; messages arriving during processing queue for the next batch
+- **Batch** — Queued messages are merged (content joined with `\n`, media deduplicated, metadata combined)
+
 ## Sub-agents
 
 Spawn background tasks with isolated tool sets (no message, spawn, or cron tools to prevent recursion). Sub-agents have configurable max iterations (default: 15) and timeout (default: 5 minutes). Results are routed back to the originating channel.
@@ -213,7 +222,7 @@ Edit these files to customize your agent's personality, behavior, and proactive 
 ```bash
 pnpm install          # Install dependencies
 pnpm build            # Build all packages
-pnpm test             # Run all tests (631 tests)
+pnpm test             # Run all tests (653 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```
