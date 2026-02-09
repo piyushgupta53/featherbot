@@ -19,6 +19,7 @@ vi.mock("@featherbot/bus", () => ({
 vi.mock("@featherbot/channels", () => ({
 	BusAdapter: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 	ChannelManager: vi.fn(() => mockChannelManager),
+	SessionQueue: vi.fn((_agent: unknown) => ({ processMessage: vi.fn(), dispose: vi.fn() })),
 	TerminalChannel: vi.fn(() => ({ name: "terminal" })),
 	TelegramChannel: vi.fn(() => ({ name: "telegram" })),
 	WhatsAppChannel: vi.fn(() => ({ name: "whatsapp" })),

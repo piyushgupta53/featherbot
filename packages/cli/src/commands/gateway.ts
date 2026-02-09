@@ -5,6 +5,7 @@ import { MessageBus } from "@featherbot/bus";
 import {
 	BusAdapter,
 	ChannelManager,
+	SessionQueue,
 	TelegramChannel,
 	TerminalChannel,
 	WhatsAppChannel,
@@ -150,7 +151,8 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			? new Transcriber(config.transcription)
 			: undefined;
 
-	const adapter = new BusAdapter({ bus, agentLoop });
+	const sessionQueue = new SessionQueue(agentLoop, { debounceMs: 2000 });
+	const adapter = new BusAdapter({ bus, agentLoop: sessionQueue });
 	const channelManager = new ChannelManager({ bus });
 
 	if (process.stdin.isTTY) {
@@ -193,6 +195,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		channelManager,
 		cronService,
 		heartbeatService,
+		onStop: () => sessionQueue.dispose(),
 	});
 }
 

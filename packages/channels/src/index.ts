@@ -1,5 +1,7 @@
 export { BusAdapter } from "./adapter.js";
 export type { AgentProcessor, BusAdapterOptions } from "./adapter.js";
+export { SessionQueue, BATCHED_FINISH_REASON } from "./session-queue.js";
+export type { SessionQueueOptions } from "./session-queue.js";
 export { BaseChannel } from "./base.js";
 export { ChannelManager } from "./manager.js";
 export type { ChannelManagerOptions } from "./manager.js";

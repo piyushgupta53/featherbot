@@ -39,6 +39,7 @@ export class Gateway {
 		}
 		await this.options.channelManager.stopAll();
 		this.options.adapter.stop();
+		this.options.onStop?.();
 		this.options.bus.close();
 	}
 

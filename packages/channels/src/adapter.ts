@@ -6,6 +6,7 @@ import type {
 } from "@featherbot/bus";
 import { createOutboundMessage } from "@featherbot/bus";
 import type { AgentLoopResult } from "@featherbot/core";
+import { BATCHED_FINISH_REASON } from "./session-queue.js";
 
 export interface AgentProcessor {
 	processMessage(inbound: InboundMessage): Promise<AgentLoopResult>;
@@ -31,6 +32,7 @@ export class BusAdapter {
 			const { message } = event;
 			try {
 				const result = await this.agentLoop.processMessage(message);
+				if (result.finishReason === BATCHED_FINISH_REASON) return;
 				const outbound = createOutboundMessage({
 					channel: message.channel,
 					chatId: message.chatId,
