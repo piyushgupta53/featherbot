@@ -19,14 +19,27 @@ export interface MemoryExtractorOptions {
 }
 
 export function buildExtractionPrompt(sessionKey: string, date: string): string {
-	return `Review the conversation above and produce a compressed observation log.
+	return `Review the conversation above. You have TWO independent jobs. Do BOTH.
 
-## Step 1 — Daily Note Observations
+## Job 1 — Update MEMORY.md (long-term memory)
 
-Write observations to today's daily note (memory/${date}.md):
-1. Use read_file to check if the daily note already exists.
-2. If it exists, read its content, merge your new observations, then use write_file to write the complete updated file.
-3. If it does NOT exist, use write_file to create it with a date heading (e.g., "# ${date}") followed by your session header and observations.
+This is the most important job. MEMORY.md is permanent — it carries across all future conversations.
+
+1. Use read_file to read memory/MEMORY.md.
+2. Review the conversation for ANY of these:
+   - Personal details, projects, hobbies, interests → add to **Facts**
+   - Recurring behaviors or preferences → add to **Observed Patterns**
+   - Follow-ups, deadlines, things to circle back on → add to **Pending**
+3. If there are items in the conversation not already in MEMORY.md, use edit_file to add them.
+4. Even if a previous extraction wrote to the daily note, MEMORY.md may still be missing those facts. Always check.
+
+## Job 2 — Update daily note (memory/${date}.md)
+
+1. Use read_file to check if memory/${date}.md already exists.
+2. If it exists, check if the section "## ${sessionKey}" is already present.
+   - If the section exists with the same observations, do NOT rewrite it.
+   - If the section is missing or has new observations to add, read the content, merge, and use write_file.
+3. If the file does NOT exist, use write_file to create it with heading "# ${date}" followed by your observations.
 
 Use the session header "## ${sessionKey}" then list priority-tagged observations:
 
@@ -34,38 +47,12 @@ Use the session header "## ${sessionKey}" then list priority-tagged observations
 - 🟡 Moderate — topics discussed, tasks worked on, notable context, preferences expressed
 - 🟢 Minor — informational details, small talk, passing mentions
 
-Nest related sub-observations under a parent. Keep each observation to one concise line.
-
-Example format:
-\`\`\`
-## telegram:123
-- 🔴 User decided to migrate API from REST to GraphQL
-  - 🟡 Discussed trade-offs: type safety vs complexity
-  - 🟢 Mentioned Apollo Client as preferred library
-- 🟡 Worked on debugging auth token expiry issue
-- 🔴 ACTION: deploy staging build before Friday
-\`\`\`
-
-## Step 2 — Long-term Memory (REQUIRED)
-
-After writing the daily note, you MUST also update memory/MEMORY.md:
-1. Use read_file to read the current memory/MEMORY.md.
-2. Check if ANY of these are new (not already in the file):
-   - Personal details, projects, hobbies, interests → add to **Facts**
-   - Recurring behaviors or preferences → add to **Observed Patterns**
-   - Follow-ups, deadlines, things to circle back on → add to **Pending**
-3. If there are new items, use edit_file to add them to the appropriate section.
-4. Do NOT skip this step — the daily note is temporary, MEMORY.md is permanent.
-
-## Step 3 — Duplicate Detection
-
-Before writing, check the conversation history for inline edit_file or write_file calls that already persisted facts during this conversation. Skip anything already written to avoid duplicates.
+Keep each observation to one concise line.
 
 ## Rules
 
 - Only SKIP if the conversation is truly empty (just "hi" with no follow-up or substantive content).
-- Do NOT duplicate information already in memory or daily notes.
-- You MUST use write_file to persist observations — just responding with text does nothing.
+- You MUST use write_file or edit_file to persist — just responding with text does nothing.
 - Be concise — compress, don't transcribe.`;
 }
 

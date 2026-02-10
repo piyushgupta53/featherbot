@@ -30,7 +30,7 @@ describe("MemoryExtractor", () => {
 			string,
 			{ sessionKey: string; skipHistory: boolean },
 		];
-		expect(call[0]).toContain("observation log");
+		expect(call[0]).toContain("TWO independent jobs");
 		expect(call[1].sessionKey).toBe("telegram:123");
 	});
 
@@ -263,8 +263,12 @@ describe("buildExtractionPrompt", () => {
 		expect(prompt).toContain("truly empty");
 	});
 
-	it("includes duplicate detection step", () => {
+	it("makes MEMORY.md update Job 1 (highest priority)", () => {
 		const prompt = buildExtractionPrompt("telegram:123", "2026-02-10");
-		expect(prompt).toContain("Duplicate Detection");
+		const job1Idx = prompt.indexOf("Job 1");
+		const job2Idx = prompt.indexOf("Job 2");
+		expect(job1Idx).toBeGreaterThanOrEqual(0);
+		expect(job1Idx).toBeLessThan(job2Idx);
+		expect(prompt).toContain("MEMORY.md");
 	});
 });
