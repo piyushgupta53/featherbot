@@ -97,7 +97,9 @@ Heartbeat is configured in `config.json`:
   "heartbeat": {
     "enabled": true,
     "intervalMs": 600000,
-    "heartbeatFile": "HEARTBEAT.md"
+    "heartbeatFile": "HEARTBEAT.md",
+    "notifyChannel": "telegram",
+    "notifyChatId": "123456789"
   }
 }
 ```
@@ -105,3 +107,5 @@ Heartbeat is configured in `config.json`:
 - `enabled` — turn heartbeat on/off (default: `true`)
 - `intervalMs` — interval between ticks in milliseconds (default: `600000` = 10 minutes)
 - `heartbeatFile` — filename relative to workspace (default: `HEARTBEAT.md`)
+- `notifyChannel` — channel to deliver heartbeat messages to (e.g., `"telegram"`, `"whatsapp"`; optional)
+- `notifyChatId` — chat ID to deliver heartbeat messages to (optional; both must be set for delivery)
