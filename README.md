@@ -162,7 +162,7 @@ File-based storage in `workspace/memory/`, managed by the agent via file tools:
 
 **Size guard** — When MEMORY.md grows large (~2000+ tokens), the agent is nudged to consolidate and prune stale entries.
 
-**Automatic extraction** — After a conversation goes idle (default: 5 minutes), a background pass reviews the conversation and persists any new user facts, preferences, or patterns to `MEMORY.md` automatically — no need for the user to say "remember this."
+**Automatic extraction** — After a conversation goes idle (default: 5 minutes), a background pass reviews the conversation and produces two outputs: (1) a compressed, priority-tagged observation log appended to the daily note (`YYYY-MM-DD.md`) capturing the full conversation narrative, and (2) any new user facts, preferences, or patterns persisted to `MEMORY.md`. Observations are tagged 🔴 important / 🟡 moderate / 🟢 minor so the agent can prioritize during rollup.
 
 **On-demand recall** — The `recall_recent` tool lets the agent pull past daily notes (up to 30 days) without bloating every prompt.
 

@@ -11,9 +11,38 @@ export interface MemoryExtractorOptions {
 	enabled?: boolean;
 }
 
-const EXTRACTION_PROMPT = `Review the conversation above. Extract any user facts, preferences, dates, habits, or patterns worth remembering and persist them to memory/MEMORY.md via edit_file.
+const EXTRACTION_PROMPT = `Review the conversation above and produce a compressed observation log.
 
-Only persist NEW information not already present in memory. If there is nothing new to persist, respond with SKIP.`;
+## Step 1 — Daily Note Observations
+
+Append observations to today's daily note (memory/YYYY-MM-DD.md) using edit_file.
+Use a session header (e.g., "## telegram:123") based on the current session, then list priority-tagged observations:
+
+- 🔴 Important — decisions made, action items, explicit requests to remember, strong preferences
+- 🟡 Moderate — topics discussed, tasks worked on, notable context, preferences expressed
+- 🟢 Minor — informational details, small talk, passing mentions
+
+Nest related sub-observations under a parent. Keep each observation to one concise line.
+
+Example format:
+\`\`\`
+## telegram:123
+- 🔴 User decided to migrate API from REST to GraphQL
+  - 🟡 Discussed trade-offs: type safety vs complexity
+  - 🟢 Mentioned Apollo Client as preferred library
+- 🟡 Worked on debugging auth token expiry issue
+- 🔴 ACTION: deploy staging build before Friday
+\`\`\`
+
+## Step 2 — Long-term Memory
+
+After writing observations, update memory/MEMORY.md with any NEW facts, preferences, or pending items not already present — same as before.
+
+## Rules
+
+- If there is nothing worth recording from this conversation, respond with SKIP.
+- Do NOT duplicate information already in memory or daily notes.
+- Be concise — compress, don't transcribe.`;
 
 export class MemoryExtractor {
 	private readonly agentLoop: AgentLoopLike;

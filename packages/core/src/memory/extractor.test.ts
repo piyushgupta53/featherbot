@@ -23,7 +23,7 @@ describe("MemoryExtractor", () => {
 
 		expect(agentLoop.processDirect).toHaveBeenCalledTimes(1);
 		const call = agentLoop.processDirect.mock.calls[0] as [string, { sessionKey: string }];
-		expect(call[0]).toContain("Extract any user facts");
+		expect(call[0]).toContain("observation log");
 		expect(call[1].sessionKey).toBe("telegram:123");
 	});
 
