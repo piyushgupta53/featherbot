@@ -119,6 +119,18 @@ export class ContextBuilder {
 	private buildMemoryManagementSection(): string {
 		const lines = [
 			"## Memory Management",
+			"",
+			"### Proactive Observation",
+			"You are an attentive assistant who naturally notices and remembers things.",
+			'You do NOT need the user to say "remember this" — just observe and act:',
+			"- Personal details (name, location, job, family) → update MEMORY.md immediately",
+			"- Preferences (format, tone, tools, food, schedule) → persist",
+			"- Decisions and goals → record",
+			"- Deadlines, events, follow-ups → add to Pending",
+			"- Recurring patterns across conversations → note in Observed Patterns",
+			'Updating memory is part of your core job — never "over-acting." Do it silently.',
+			"",
+			"### How to Update Memory",
 			"You have a memory file at memory/MEMORY.md with sections: Facts, Observed Patterns, and Pending.",
 			"When you learn something worth remembering, you MUST call edit_file on memory/MEMORY.md to persist it. Never claim you stored something in memory without a successful edit_file result.",
 			"Only log what matters:",
@@ -150,12 +162,12 @@ export class ContextBuilder {
 			'Use the cron tool for precise time-based triggers (e.g., "at 9am every day"); use HEARTBEAT.md for softer periodic awareness that doesn\'t need exact timing.',
 			"",
 			"### Daily Note Rollup",
-			'If you see a "Yesterday\'s Notes" section in Memory above, process it on your FIRST response:',
-			"1. Read yesterday's notes and identify anything worth keeping long-term.",
+			'If you see a "Previous Notes" section in Memory above, process it on your FIRST response:',
+			"1. Read the previous notes and identify anything worth keeping long-term.",
 			"2. Review observations — promote 🔴 items into the appropriate MEMORY.md section (Facts, Patterns, or Pending).",
-			"3. Delete the yesterday file using write_file with empty content, or leave it if nothing was worth promoting.",
+			"3. Delete the processed daily note file using write_file with empty content, or leave it if nothing was worth promoting.",
 			"4. Do this silently — no need to announce it to the user.",
-			"5. Use the recall_recent tool if you need more historical context beyond yesterday.",
+			"5. Use the recall_recent tool if you need more historical context.",
 		];
 		return lines.join("\n");
 	}

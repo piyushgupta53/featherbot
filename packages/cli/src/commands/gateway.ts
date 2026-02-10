@@ -147,6 +147,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		agentLoop,
 		idleMs: config.memory.extractionIdleMs,
 		enabled: config.memory.extractionEnabled,
+		workspacePath: workspace,
 	});
 
 	let heartbeatService: HeartbeatService | undefined;

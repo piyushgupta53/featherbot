@@ -54,12 +54,12 @@ export class AgentLoop {
 
 	async processDirect(
 		message: string,
-		options?: { systemPrompt?: string; sessionKey?: string },
+		options?: { systemPrompt?: string; sessionKey?: string; skipHistory?: boolean },
 	): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = (options?.sessionKey as SessionKey) ?? "direct:default";
 		const staticPrompt = options?.systemPrompt ?? this.systemPrompt;
 		const ctx = await this.resolveContext(staticPrompt);
-		return this.run(sessionKey, message, ctx);
+		return this.run(sessionKey, message, ctx, options?.skipHistory);
 	}
 
 	private getOrCreateHistory(sessionKey: SessionKey): ConversationHistory {
@@ -92,6 +92,7 @@ export class AgentLoop {
 		sessionKey: SessionKey,
 		userContent: string,
 		ctx: ContextBuilderResult,
+		skipHistory?: boolean,
 	): Promise<AgentLoopResult> {
 		const history = this.getOrCreateHistory(sessionKey);
 
@@ -120,13 +121,15 @@ export class AgentLoop {
 
 		const steps = result.toolCalls.length > 0 ? result.toolCalls.length + 1 : 1;
 
-		history.add({ role: "user", content: userContent });
-		if (result.text) {
-			history.add({ role: "assistant", content: result.text });
-		}
+		if (!skipHistory) {
+			history.add({ role: "user", content: userContent });
+			if (result.text) {
+				history.add({ role: "assistant", content: result.text });
+			}
 
-		if (this.sessionStore !== undefined) {
-			this.sessionStore.touch(sessionKey);
+			if (this.sessionStore !== undefined) {
+				this.sessionStore.touch(sessionKey);
+			}
 		}
 
 		this.invokeStepCallback({

@@ -39,13 +39,16 @@ export class FileMemoryStore implements MemoryStore {
 			}
 		}
 
-		// Include yesterday's unprocessed notes so the agent can roll them up
-		const yesterday = new Date();
-		yesterday.setDate(yesterday.getDate() - 1);
-		const yesterdayContent = (await this.readFileSafe(this.getDailyNotePath(yesterday))).trim();
-		if (yesterdayContent) {
-			const yDateStr = formatDate(yesterday);
-			sections.push(`## Yesterday's Notes (${yDateStr})\n${yesterdayContent}`);
+		// Include the last 3 days of unprocessed notes so the agent can roll them up
+		// (handles multi-day gaps where the user didn't chat for a day or two)
+		for (let daysAgo = 3; daysAgo >= 1; daysAgo--) {
+			const pastDate = new Date();
+			pastDate.setDate(pastDate.getDate() - daysAgo);
+			const pastContent = (await this.readFileSafe(this.getDailyNotePath(pastDate))).trim();
+			if (pastContent) {
+				const pastDateStr = formatDate(pastDate);
+				sections.push(`## Previous Notes (${pastDateStr})\n${pastContent}`);
+			}
 		}
 
 		if (daily) {

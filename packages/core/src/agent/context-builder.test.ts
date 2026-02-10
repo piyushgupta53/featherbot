@@ -464,7 +464,40 @@ describe("ContextBuilder", () => {
 			expect(systemPrompt).toContain("Do NOT log every message");
 		});
 
-		it("contains daily note rollup instructions", async () => {
+		it("contains proactive observation section", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: {
+					getMemoryContext: async () => "Some memory",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### Proactive Observation");
+			expect(systemPrompt).toContain("naturally notices and remembers things");
+			expect(systemPrompt).toContain('do NOT need the user to say "remember this"');
+		});
+
+		it("proactive observation appears before how-to section", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: {
+					getMemoryContext: async () => "Some memory",
+					getRecentMemories: async () => "",
+					getMemoryFilePath: () => "",
+					getDailyNotePath: () => "",
+				},
+			});
+			const { systemPrompt } = await builder.build();
+			const proactiveIdx = systemPrompt.indexOf("### Proactive Observation");
+			const howToIdx = systemPrompt.indexOf("### How to Update Memory");
+			expect(proactiveIdx).toBeGreaterThanOrEqual(0);
+			expect(howToIdx).toBeGreaterThan(proactiveIdx);
+		});
+
+		it("contains daily note rollup instructions with 'Previous Notes' wording", async () => {
 			const builder = new ContextBuilder({
 				...defaultOptions,
 				memoryStore: {
@@ -476,7 +509,7 @@ describe("ContextBuilder", () => {
 			});
 			const { systemPrompt } = await builder.build();
 			expect(systemPrompt).toContain("### Daily Note Rollup");
-			expect(systemPrompt).toContain("Yesterday's Notes");
+			expect(systemPrompt).toContain("Previous Notes");
 			expect(systemPrompt).toContain("recall_recent");
 		});
 	});

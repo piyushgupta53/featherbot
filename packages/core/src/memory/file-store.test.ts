@@ -95,23 +95,60 @@ describe("FileMemoryStore", () => {
 			expect(result).not.toContain("Warning");
 		});
 
-		it("includes yesterday's notes when present", async () => {
+		it("includes previous notes when present (yesterday)", async () => {
 			const yStr = yesterdayStr();
 			await writeFile(join(tempDir, "memory", `${yStr}.md`), "yesterday stuff");
 
 			const result = await store.getMemoryContext();
-			expect(result).toContain(`## Yesterday's Notes (${yStr})`);
+			expect(result).toContain(`## Previous Notes (${yStr})`);
 			expect(result).toContain("yesterday stuff");
 		});
 
-		it("omits yesterday section when no yesterday file", async () => {
+		it("loads last 3 days of unprocessed notes", async () => {
+			const dates: string[] = [];
+			for (let i = 1; i <= 3; i++) {
+				const d = new Date();
+				d.setDate(d.getDate() - i);
+				const ds = d.toISOString().slice(0, 10);
+				dates.push(ds);
+				await writeFile(join(tempDir, "memory", `${ds}.md`), `notes from ${i} days ago`);
+			}
+
+			const result = await store.getMemoryContext();
+			// All 3 days should be present
+			for (const ds of dates) {
+				expect(result).toContain(`## Previous Notes (${ds})`);
+			}
+			expect(result).toContain("notes from 1 days ago");
+			expect(result).toContain("notes from 2 days ago");
+			expect(result).toContain("notes from 3 days ago");
+		});
+
+		it("orders previous notes oldest-first (3 days ago before yesterday)", async () => {
+			const dates: string[] = [];
+			for (let i = 1; i <= 3; i++) {
+				const d = new Date();
+				d.setDate(d.getDate() - i);
+				const ds = d.toISOString().slice(0, 10);
+				dates.push(ds);
+				await writeFile(join(tempDir, "memory", `${ds}.md`), `day-${i}`);
+			}
+
+			const result = await store.getMemoryContext();
+			// dates[2] is 3 days ago, dates[0] is yesterday
+			const idx3 = result.indexOf(`## Previous Notes (${dates[2]})`);
+			const idx1 = result.indexOf(`## Previous Notes (${dates[0]})`);
+			expect(idx3).toBeLessThan(idx1);
+		});
+
+		it("omits previous notes section when no files exist", async () => {
 			await writeFile(join(tempDir, "memory", "MEMORY.md"), "long-term");
 
 			const result = await store.getMemoryContext();
-			expect(result).not.toContain("Yesterday's Notes");
+			expect(result).not.toContain("Previous Notes");
 		});
 
-		it("orders sections: long-term, warning, yesterday, today", async () => {
+		it("orders sections: long-term, warning, previous notes, today", async () => {
 			const largeContent = "x".repeat(9000);
 			await writeFile(join(tempDir, "memory", "MEMORY.md"), largeContent);
 			const today = new Date().toISOString().slice(0, 10);
@@ -122,11 +159,11 @@ describe("FileMemoryStore", () => {
 			const result = await store.getMemoryContext();
 			const longTermIdx = result.indexOf("## Long-term Memory");
 			const warningIdx = result.indexOf("**Warning:");
-			const yesterdayIdx = result.indexOf("## Yesterday's Notes");
+			const prevIdx = result.indexOf("## Previous Notes");
 			const todayIdx = result.indexOf("## Today's Notes");
 			expect(longTermIdx).toBeLessThan(warningIdx);
-			expect(warningIdx).toBeLessThan(yesterdayIdx);
-			expect(yesterdayIdx).toBeLessThan(todayIdx);
+			expect(warningIdx).toBeLessThan(prevIdx);
+			expect(prevIdx).toBeLessThan(todayIdx);
 		});
 	});
 

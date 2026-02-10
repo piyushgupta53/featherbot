@@ -359,6 +359,66 @@ describe("AgentLoop", () => {
 			expect(messages[1]).toEqual({ role: "user", content: "a" });
 		});
 
+		it("skipHistory: true does not add messages to history", async () => {
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `R${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig(),
+			});
+
+			// First call with skipHistory: true
+			await loop.processDirect("extraction prompt", {
+				sessionKey: "telegram:123",
+				skipHistory: true,
+			});
+
+			// Second call WITHOUT skipHistory — should have NO history from first call
+			await loop.processDirect("real message", { sessionKey: "telegram:123" });
+
+			const opts = getCallOpts(generateSpy, 1);
+			const messages = opts.messages;
+			// system + user "real message" (no history from first call)
+			expect(messages.length).toBe(2);
+			expect(messages[1]).toEqual({ role: "user", content: "real message" });
+		});
+
+		it("skipHistory: true still sees existing history as context", async () => {
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `R${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig(),
+			});
+
+			// First call adds to history normally
+			await loop.processDirect("first message", { sessionKey: "telegram:123" });
+
+			// Second call with skipHistory: true — should SEE first message in context
+			await loop.processDirect("extraction prompt", {
+				sessionKey: "telegram:123",
+				skipHistory: true,
+			});
+
+			const opts = getCallOpts(generateSpy, 1);
+			const messages = opts.messages;
+			// system + history(user "first message" + assistant "R1") + user "extraction prompt"
+			expect(messages.length).toBe(4);
+			expect(messages[1]).toEqual({ role: "user", content: "first message" });
+			expect(messages[2]).toEqual({ role: "assistant", content: "R1" });
+			expect(messages[3]).toEqual({ role: "user", content: "extraction prompt" });
+		});
+
 		it("does not share history with processMessage sessions", async () => {
 			let callCount = 0;
 			const generateSpy = vi.fn<GenerateFn>(async () => {
