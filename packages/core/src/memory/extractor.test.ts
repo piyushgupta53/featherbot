@@ -6,6 +6,8 @@ describe("MemoryExtractor", () => {
 
 	beforeEach(() => {
 		vi.useFakeTimers();
+		vi.spyOn(console, "log").mockImplementation(() => {});
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		agentLoop = {
 			processDirect: vi.fn().mockResolvedValue({ text: "SKIP" }),
 		};
@@ -13,6 +15,7 @@ describe("MemoryExtractor", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	it("fires processDirect after idleMs with extraction prompt and sessionKey", async () => {
@@ -106,8 +109,9 @@ describe("MemoryExtractor", () => {
 		expect(agentLoop.processDirect).not.toHaveBeenCalled();
 	});
 
-	it("swallows processDirect errors", async () => {
-		agentLoop.processDirect.mockRejectedValueOnce(new Error("boom"));
+	it("swallows processDirect errors and logs them", async () => {
+		const error = new Error("boom");
+		agentLoop.processDirect.mockRejectedValueOnce(error);
 
 		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
 
@@ -116,10 +120,41 @@ describe("MemoryExtractor", () => {
 
 		// Should not throw — error is swallowed
 		expect(agentLoop.processDirect).toHaveBeenCalledTimes(1);
+		expect(console.error).toHaveBeenCalledWith(
+			"[memory] extraction failed for telegram:123:",
+			error,
+		);
 
 		// Should still work after error
 		extractor.scheduleExtraction("telegram:123");
 		await vi.advanceTimersByTimeAsync(1000);
 		expect(agentLoop.processDirect).toHaveBeenCalledTimes(2);
+	});
+
+	it("logs 'skipped' when result is SKIP", async () => {
+		agentLoop.processDirect.mockResolvedValue({ text: "SKIP" });
+		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
+
+		extractor.scheduleExtraction("telegram:123");
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(console.log).toHaveBeenCalledWith(
+			"[memory] extracting observations for telegram:123...",
+		);
+		expect(console.log).toHaveBeenCalledWith(
+			"[memory] extraction skipped for telegram:123 (nothing new)",
+		);
+	});
+
+	it("logs 'complete' when result has observations", async () => {
+		agentLoop.processDirect.mockResolvedValue({
+			text: "Wrote observations to daily note",
+		});
+		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
+
+		extractor.scheduleExtraction("telegram:123");
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(console.log).toHaveBeenCalledWith("[memory] extraction complete for telegram:123");
 	});
 });

@@ -83,10 +83,19 @@ export class MemoryExtractor {
 	private async extract(sessionKey: string): Promise<void> {
 		if (this.running.has(sessionKey)) return;
 		this.running.add(sessionKey);
+		console.log(`[memory] extracting observations for ${sessionKey}...`);
 		try {
-			await this.agentLoop.processDirect(EXTRACTION_PROMPT, { sessionKey });
-		} catch {
-			/* best-effort */
+			const result = await this.agentLoop.processDirect(EXTRACTION_PROMPT, {
+				sessionKey,
+			});
+			const skipped = result.text.trim().toUpperCase() === "SKIP";
+			if (skipped) {
+				console.log(`[memory] extraction skipped for ${sessionKey} (nothing new)`);
+			} else {
+				console.log(`[memory] extraction complete for ${sessionKey}`);
+			}
+		} catch (err) {
+			console.error(`[memory] extraction failed for ${sessionKey}:`, err);
 		} finally {
 			this.running.delete(sessionKey);
 		}
