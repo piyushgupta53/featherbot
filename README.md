@@ -2,10 +2,10 @@
   <img src="assets/featherbot.png" alt="FeatherBot" width="500" />
 </p>
 
-<h1 align="center">FeatherBot: Personal AI Agent Framework</h1>
+<h1 align="center">featherbot: Personal AI Agent</h1>
 
 <p align="center">
-  A lightweight personal AI agent framework. Connects to messaging platforms (Telegram, WhatsApp) and provides an extensible tool/skill system powered by LLMs via the Vercel AI SDK.
+  A lightweight personal AI agent. Connects to messaging platforms (Telegram, WhatsApp) and provides an extensible tool/skill system powered by LLMs.
 </p>
 
 ---
@@ -255,15 +255,6 @@ pnpm test             # Run all tests (682 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```
-
-### Code Conventions
-
-- TypeScript strict mode, ESM throughout
-- Biome: tabs, double quotes, semicolons
-- Named exports only (no default exports)
-- Zod for all schemas and runtime validation
-- Co-located tests: `foo.ts` → `foo.test.ts`
-- File naming: `kebab-case.ts`
 
 ## License
 
