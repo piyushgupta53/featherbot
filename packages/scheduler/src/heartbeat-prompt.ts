@@ -19,6 +19,7 @@ Current time: ${timestamp}
 Day of week: ${dayOfWeek}
 
 Review the heartbeat file below. Execute any actionable tasks.
+If you want to notify the user, respond with a clear, friendly message.
 If nothing is actionable, respond with SKIP.
 
 ---

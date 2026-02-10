@@ -13,6 +13,7 @@ import {
 import {
 	CronTool,
 	Gateway,
+	MemoryExtractor,
 	RecallRecentTool,
 	SpawnTool,
 	SubagentManager,
@@ -142,6 +143,12 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		},
 	});
 
+	const memoryExtractor = new MemoryExtractor({
+		agentLoop,
+		idleMs: config.memory.extractionIdleMs,
+		enabled: config.memory.extractionEnabled,
+	});
+
 	let heartbeatService: HeartbeatService | undefined;
 	if (config.heartbeat.enabled) {
 		const workspace = resolveHome(config.agents.defaults.workspace);
@@ -150,10 +157,30 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			heartbeatFilePath: join(workspace, config.heartbeat.heartbeatFile),
 			onTick: async (content) => {
 				const prompt = buildHeartbeatPrompt(content);
-				await agentLoop.processDirect(prompt, {
+				const result = await agentLoop.processDirect(prompt, {
 					sessionKey: "system:heartbeat",
 					systemPrompt: prompt,
 				});
+				if (
+					result.text &&
+					!result.text.startsWith("SKIP") &&
+					config.heartbeat.notifyChannel &&
+					config.heartbeat.notifyChatId
+				) {
+					await bus.publish({
+						type: "message:outbound",
+						message: createOutboundMessage({
+							channel: config.heartbeat.notifyChannel,
+							chatId: config.heartbeat.notifyChatId,
+							content: result.text,
+							replyTo: null,
+							media: [],
+							metadata: {},
+							inReplyToMessageId: null,
+						}),
+						timestamp: new Date(),
+					});
+				}
 			},
 		});
 	}
@@ -199,6 +226,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		if (cronTool) {
 			cronTool.setContext(event.message.channel, event.message.chatId, userTimezone);
 		}
+		memoryExtractor.scheduleExtraction(`${event.message.channel}:${event.message.chatId}`);
 	});
 
 	return new Gateway({
@@ -207,7 +235,10 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		channelManager,
 		cronService,
 		heartbeatService,
-		onStop: () => sessionQueue.dispose(),
+		onStop: () => {
+			memoryExtractor.dispose();
+			sessionQueue.dispose();
+		},
 	});
 }
 
@@ -247,6 +278,10 @@ export async function runGateway(): Promise<void> {
 	}
 	if (config.transcription.enabled && config.transcription.apiKey !== "") {
 		console.log(`Voice transcription: enabled (${config.transcription.provider})`);
+	}
+	if (config.memory.extractionEnabled) {
+		const minutes = Math.round(config.memory.extractionIdleMs / 60000);
+		console.log(`Memory extraction: enabled (${minutes}m idle)`);
 	}
 	console.log("Sub-agents: enabled");
 	console.log("");

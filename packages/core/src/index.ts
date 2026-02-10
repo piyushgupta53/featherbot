@@ -6,6 +6,7 @@ export {
 	CronConfigSchema,
 	DEFAULT_BOOTSTRAP_FILES,
 	HeartbeatConfigSchema,
+	MemoryConfigSchema,
 	DiscordChannelConfigSchema,
 	ExecToolConfigSchema,
 	FeatherBotConfigSchema,
@@ -25,6 +26,7 @@ export type {
 	CronConfig,
 	FeatherBotConfig,
 	HeartbeatConfig,
+	MemoryConfig,
 	ProviderConfig,
 	SessionConfig,
 	SubagentConfig,
@@ -119,8 +121,8 @@ export type {
 	SubagentState,
 	SubagentStatus,
 } from "./agent/index.js";
-export { createMemoryStore, FileMemoryStore } from "./memory/index.js";
-export type { MemoryStore } from "./memory/index.js";
+export { createMemoryStore, FileMemoryStore, MemoryExtractor } from "./memory/index.js";
+export type { MemoryExtractorOptions, MemoryStore } from "./memory/index.js";
 export {
 	createSkillsLoader,
 	parseFrontmatter,

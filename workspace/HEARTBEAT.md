@@ -1,6 +1,6 @@
 # Heartbeat
 
-This file is read by FeatherBot every heartbeat interval (default: 30 minutes).
+This file is read by FeatherBot every heartbeat interval (default: 10 minutes).
 If it contains actionable content, the agent wakes up and processes it.
 If the file is empty or contains only comments, the agent stays silent.
 

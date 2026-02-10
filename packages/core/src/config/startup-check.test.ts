@@ -34,7 +34,14 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 		},
 		session: { dbPath: "", maxMessages: 50 },
 		cron: { enabled: false, storePath: "" },
-		heartbeat: { enabled: false, intervalMs: 1800000, heartbeatFile: "HEARTBEAT.md" },
+		heartbeat: {
+			enabled: false,
+			intervalMs: 600000,
+			heartbeatFile: "HEARTBEAT.md",
+			notifyChannel: undefined,
+			notifyChatId: undefined,
+		},
+		memory: { extractionEnabled: true, extractionIdleMs: 300000 },
 		subagent: { maxIterations: 15, timeoutMs: 300000 },
 		transcription: {
 			enabled: false,

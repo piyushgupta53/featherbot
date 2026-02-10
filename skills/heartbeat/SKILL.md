@@ -12,7 +12,7 @@ The heartbeat is a periodic self-wake system that reads `HEARTBEAT.md` from the 
 
 ## How It Works
 
-1. Every N minutes (default: 30), the heartbeat timer fires.
+1. Every N minutes (default: 10), the heartbeat timer fires.
 2. The service reads `HEARTBEAT.md` from the workspace directory.
 3. If the file has content, it builds a prompt with the current timestamp and day of week, then sends it to the agent.
 4. If the file is missing or empty, the tick is silently skipped.
@@ -96,12 +96,12 @@ Heartbeat is configured in `config.json`:
 {
   "heartbeat": {
     "enabled": true,
-    "intervalMs": 1800000,
+    "intervalMs": 600000,
     "heartbeatFile": "HEARTBEAT.md"
   }
 }
 ```
 
 - `enabled` — turn heartbeat on/off (default: `true`)
-- `intervalMs` — interval between ticks in milliseconds (default: `1800000` = 30 minutes)
+- `intervalMs` — interval between ticks in milliseconds (default: `600000` = 10 minutes)
 - `heartbeatFile` — filename relative to workspace (default: `HEARTBEAT.md`)

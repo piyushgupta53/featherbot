@@ -6,4 +6,6 @@ export function createMemoryStore(workspacePath: string): MemoryStore {
 }
 
 export { FileMemoryStore };
+export { MemoryExtractor } from "./extractor.js";
+export type { MemoryExtractorOptions } from "./extractor.js";
 export type { MemoryStore };

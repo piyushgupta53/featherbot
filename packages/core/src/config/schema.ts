@@ -81,8 +81,10 @@ export const CronConfigSchema = z.object({
 
 export const HeartbeatConfigSchema = z.object({
 	enabled: z.boolean().default(true),
-	intervalMs: z.number().int().positive().default(1800000),
+	intervalMs: z.number().int().positive().default(600000),
 	heartbeatFile: z.string().default("HEARTBEAT.md"),
+	notifyChannel: z.string().optional(),
+	notifyChatId: z.string().optional(),
 });
 
 export const SubagentConfigSchema = z.object({
@@ -98,6 +100,11 @@ export const TranscriptionConfigSchema = z.object({
 	maxDurationSeconds: z.number().int().positive().default(120),
 });
 
+export const MemoryConfigSchema = z.object({
+	extractionEnabled: z.boolean().default(true),
+	extractionIdleMs: z.number().int().positive().default(300000),
+});
+
 export const FeatherBotConfigSchema = z.object({
 	agents: z.object({ defaults: AgentConfigSchema.default({}) }).default({}),
 	channels: ChannelConfigSchema.default({}),
@@ -106,6 +113,7 @@ export const FeatherBotConfigSchema = z.object({
 	session: SessionConfigSchema.default({}),
 	cron: CronConfigSchema.default({}),
 	heartbeat: HeartbeatConfigSchema.default({}),
+	memory: MemoryConfigSchema.default({}),
 	subagent: SubagentConfigSchema.default({}),
 	transcription: TranscriptionConfigSchema.default({}),
 });
@@ -118,6 +126,7 @@ export type SessionConfig = z.infer<typeof SessionConfigSchema>;
 export type ToolConfig = z.infer<typeof ToolConfigSchema>;
 export type CronConfig = z.infer<typeof CronConfigSchema>;
 export type HeartbeatConfig = z.infer<typeof HeartbeatConfigSchema>;
+export type MemoryConfig = z.infer<typeof MemoryConfigSchema>;
 export type SubagentConfig = z.infer<typeof SubagentConfigSchema>;
 export type TranscriptionConfig = z.infer<typeof TranscriptionConfigSchema>;
 export type WebFetchToolConfig = z.infer<typeof WebFetchToolConfigSchema>;

@@ -17,7 +17,7 @@
 - **Tool system** — File I/O, shell execution, web search/fetch, cron scheduling, sub-agent spawning
 - **Skills** — Markdown-driven plugins with two-tier loading (always-on + lazy-loaded)
 - **Sub-agents** — Spawn background tasks with isolated tool sets and timeouts
-- **Memory** — Persistent file-based memory with daily note rollup and size-aware context management
+- **Memory** — Persistent file-based memory with automatic extraction, daily note rollup, and size-aware context management
 - **Session management** — SQLite-backed conversation history with message trimming
 - **Cron & heartbeat** — Scheduled tasks, one-time reminders, and periodic self-reflection
 - **Voice transcription** — Groq or OpenAI Whisper for voice messages in Telegram/WhatsApp
@@ -162,6 +162,8 @@ File-based storage in `workspace/memory/`, managed by the agent via file tools:
 
 **Size guard** — When MEMORY.md grows large (~2000+ tokens), the agent is nudged to consolidate and prune stale entries.
 
+**Automatic extraction** — After a conversation goes idle (default: 5 minutes), a background pass reviews the conversation and persists any new user facts, preferences, or patterns to `MEMORY.md` automatically — no need for the user to say "remember this."
+
 **On-demand recall** — The `recall_recent` tool lets the agent pull past daily notes (up to 30 days) without bloating every prompt.
 
 No vector store or embeddings — just markdown files with a lifecycle.
@@ -180,7 +182,9 @@ Jobs persist to `~/.featherbot/cron.json` and fire back into the originating cha
 
 ### Heartbeat
 
-Periodic wake-up (default: every 30 minutes) that reads `HEARTBEAT.md` from the workspace. Enables proactive agent behavior: reviewing memory, checking pending follow-ups, and autonomously deciding whether to message the user.
+Periodic wake-up (default: every 10 minutes) that reads `HEARTBEAT.md` from the workspace. Enables proactive agent behavior: reviewing memory, checking pending follow-ups, and autonomously deciding whether to message the user. The agent writes to `HEARTBEAT.md` itself during conversations when it detects something that needs periodic attention.
+
+When `notifyChannel` and `notifyChatId` are configured, heartbeat results are delivered as messages to the user (e.g., via Telegram or WhatsApp) instead of being silently discarded.
 
 ## Voice Transcription
 
@@ -247,7 +251,7 @@ Edit these files to customize your agent's personality, behavior, and proactive 
 ```bash
 pnpm install          # Install dependencies
 pnpm build            # Build all packages
-pnpm test             # Run all tests (666 tests)
+pnpm test             # Run all tests (682 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```

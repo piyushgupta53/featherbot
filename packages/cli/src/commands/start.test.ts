@@ -51,7 +51,7 @@ vi.mock("@featherbot/core", () => ({
 		},
 		session: { dbPath: "", maxMessages: 50 },
 		cron: { enabled: false, storePath: "" },
-		heartbeat: { enabled: false, intervalMs: 1800000, heartbeatFile: "HEARTBEAT.md" },
+		heartbeat: { enabled: false, intervalMs: 600000, heartbeatFile: "HEARTBEAT.md" },
 		subagent: { maxIterations: 15, timeoutMs: 300000 },
 	})),
 	checkStartupConfig: vi.fn(() => ({ ready: true, errors: [], warnings: [] })),
