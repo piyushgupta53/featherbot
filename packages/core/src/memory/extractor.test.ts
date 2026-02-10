@@ -146,15 +146,47 @@ describe("MemoryExtractor", () => {
 		);
 	});
 
-	it("logs 'complete' when result has observations", async () => {
+	it("logs 'complete' with file write count when tools wrote files", async () => {
 		agentLoop.processDirect.mockResolvedValue({
 			text: "Wrote observations to daily note",
+			toolCalls: [{ toolName: "read_file" }, { toolName: "write_file" }, { toolName: "edit_file" }],
 		});
 		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
 
 		extractor.scheduleExtraction("telegram:123");
 		await vi.advanceTimersByTimeAsync(1000);
 
-		expect(console.log).toHaveBeenCalledWith("[memory] extraction complete for telegram:123");
+		expect(console.log).toHaveBeenCalledWith(
+			"[memory] extraction complete for telegram:123 (2 file write(s))",
+		);
+	});
+
+	it("warns when extraction returned text but wrote no files", async () => {
+		agentLoop.processDirect.mockResolvedValue({
+			text: "Here are the observations I noticed",
+			toolCalls: [{ toolName: "read_file" }],
+		});
+		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
+
+		extractor.scheduleExtraction("telegram:123");
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(console.log).toHaveBeenCalledWith(
+			"[memory] extraction returned text but wrote no files for telegram:123",
+		);
+	});
+
+	it("warns when extraction returned text with no tool calls", async () => {
+		agentLoop.processDirect.mockResolvedValue({
+			text: "Nothing important happened",
+		});
+		const extractor = new MemoryExtractor({ agentLoop, idleMs: 1000 });
+
+		extractor.scheduleExtraction("telegram:123");
+		await vi.advanceTimersByTimeAsync(1000);
+
+		expect(console.log).toHaveBeenCalledWith(
+			"[memory] extraction returned text but wrote no files for telegram:123",
+		);
 	});
 });
