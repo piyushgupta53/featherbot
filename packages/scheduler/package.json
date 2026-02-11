@@ -23,5 +23,8 @@
 	"dependencies": {
 		"croner": "^10.0.1",
 		"zod": "^3.24.0"
+	},
+	"devDependencies": {
+		"@types/node": "^25.2.3"
 	}
 }
