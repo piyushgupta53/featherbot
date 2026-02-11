@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { appendToExistingNote, extractImportantItems, formatDailyNote } from "./daily-note.js";
+import {
+	appendToExistingNote,
+	extractImportantItems,
+	extractRollupCandidates,
+	formatDailyNote,
+} from "./daily-note.js";
 
 describe("formatDailyNote", () => {
 	it("creates a new daily note with date heading and session section", () => {
@@ -39,25 +44,24 @@ describe("appendToExistingNote", () => {
 		expect(result).toContain("## telegram:456\n- 🟡 New observation");
 	});
 
-	it("replaces existing session section", () => {
+	it("appends to existing session section without losing prior observations", () => {
 		const existing = "# 2026-02-10\n\n## telegram:123\n- 🔴 Old observation\n";
 		const result = appendToExistingNote(existing, "telegram:123", [
 			{ text: "Updated observation", priority: "red" },
 		]);
-		expect(result).not.toContain("Old observation");
+		expect(result).toContain("Old observation");
 		expect(result).toContain("🔴 Updated observation");
 	});
 
-	it("preserves other sections when replacing", () => {
+	it("preserves other sections while appending into target session", () => {
 		const existing =
 			"# 2026-02-10\n\n## session-a\n- 🟢 A stuff\n\n## session-b\n- 🟡 B stuff\n\n## session-c\n- 🔴 C stuff\n";
 		const result = appendToExistingNote(existing, "session-b", [
 			{ text: "New B stuff", priority: "red" },
 		]);
 		expect(result).toContain("## session-a\n- 🟢 A stuff");
-		expect(result).toContain("## session-b\n- 🔴 New B stuff");
+		expect(result).toContain("## session-b\n- 🟡 B stuff\n- 🔴 New B stuff");
 		expect(result).toContain("## session-c\n- 🔴 C stuff");
-		expect(result).not.toContain("🟡 B stuff");
 	});
 });
 
@@ -81,5 +85,16 @@ describe("extractImportantItems", () => {
 	it("handles lines with only emoji (no text after)", () => {
 		const content = "- 🔴\n- 🔴 real item\n";
 		expect(extractImportantItems(content)).toEqual(["real item"]);
+	});
+});
+
+describe("extractRollupCandidates", () => {
+	it("includes red and high-signal yellow items", () => {
+		const content =
+			"# 2026-02-10\n\n## session\n- 🔴 Important decision\n- 🟡 User prefers concise summaries\n- 🟡 Chatted casually\n";
+		expect(extractRollupCandidates(content)).toEqual([
+			"Important decision",
+			"User prefers concise summaries",
+		]);
 	});
 });

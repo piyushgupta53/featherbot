@@ -33,6 +33,15 @@ export function checkStartupConfig(config: FeatherBotConfig): StartupCheckResult
 		);
 	}
 
+	if (
+		config.heartbeat.enabled &&
+		(!config.heartbeat.notifyChannel || !config.heartbeat.notifyChatId)
+	) {
+		warnings.push(
+			"Heartbeat notifications are not fully configured (notifyChannel/notifyChatId missing). Proactive messages will only work after a chat route is discovered.",
+		);
+	}
+
 	return {
 		ready: errors.length === 0,
 		errors,

@@ -1,4 +1,4 @@
-import { extractImportantItems } from "./daily-note.js";
+import { extractRollupCandidates } from "./daily-note.js";
 import { parseMemoryMarkdown, renderMemoryMarkdown } from "./memory-markdown.js";
 import type { MemoryStore } from "./types.js";
 
@@ -41,7 +41,7 @@ export async function performRollup(store: MemoryStore): Promise<RollupResult> {
 		const noteContent = await store.readDailyNote(date);
 		if (!noteContent.trim()) continue;
 
-		const items = extractImportantItems(noteContent);
+		const items = extractRollupCandidates(noteContent);
 		if (items.length > 0) {
 			importantItems.push(...items);
 		}

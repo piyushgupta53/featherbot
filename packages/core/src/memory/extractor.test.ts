@@ -277,11 +277,12 @@ describe("MemoryExtractor", () => {
 		expect(provider.generateStructured).toHaveBeenCalledTimes(2);
 	});
 
-	it("triggers compaction when MEMORY.md exceeds threshold", async () => {
-		const largeContent = "x".repeat(5000);
-		(store.readMemoryFile as ReturnType<typeof vi.fn>)
-			.mockResolvedValueOnce("") // first read for extraction
-			.mockResolvedValueOnce(largeContent); // second read after write to check size
+		it("triggers compaction when MEMORY.md exceeds threshold", async () => {
+			const largeContent = "x".repeat(5000);
+			(store.readMemoryFile as ReturnType<typeof vi.fn>)
+				.mockResolvedValueOnce("") // first read for extraction
+				.mockResolvedValueOnce("") // second read inside serialized merge
+				.mockResolvedValueOnce(largeContent); // third read after write to check size
 
 		provider.generateStructured
 			.mockResolvedValueOnce({
@@ -316,8 +317,8 @@ describe("MemoryExtractor", () => {
 		expect(console.log).toHaveBeenCalledWith("[memory] compaction complete");
 	});
 
-	it("max-age forces extraction even without idle timeout", async () => {
-		const extractor = createExtractor({ idleMs: 60000, maxAgeMs: 5000 });
+		it("max-age forces extraction even without idle timeout", async () => {
+			const extractor = createExtractor({ idleMs: 60000, maxAgeMs: 5000 });
 
 		// First extraction to set lastExtraction timestamp
 		extractor.scheduleExtraction("telegram:123");
@@ -329,9 +330,21 @@ describe("MemoryExtractor", () => {
 		extractor.scheduleExtraction("telegram:123");
 
 		// Should fire immediately due to max-age, not wait for idle
-		await vi.advanceTimersByTimeAsync(0);
-		expect(provider.generateStructured).toHaveBeenCalledTimes(2);
-	});
+			await vi.advanceTimersByTimeAsync(0);
+			expect(provider.generateStructured).toHaveBeenCalledTimes(2);
+		});
+
+		it("max-age also forces extraction before first successful extraction", async () => {
+			const extractor = createExtractor({ idleMs: 60000, maxAgeMs: 5000 });
+
+			extractor.scheduleExtraction("telegram:123");
+			await vi.advanceTimersByTimeAsync(5001);
+			// Re-scheduling after max-age should trigger immediate extraction.
+			extractor.scheduleExtraction("telegram:123");
+			await vi.advanceTimersByTimeAsync(0);
+
+			expect(provider.generateStructured).toHaveBeenCalledTimes(1);
+		});
 
 	it("dispose() force-extracts pending sessions", async () => {
 		const extractor = createExtractor({ idleMs: 60000 });

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { MessageBus } from "@featherbot/bus";
@@ -33,6 +33,38 @@ import {
 import type { FeatherBotConfig, SpawnToolOriginContext } from "@featherbot/core";
 import { CronService, HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
 import type { Command } from "commander";
+
+interface HeartbeatState {
+	lastProactiveSentAt?: string;
+}
+
+function getDateKey(date: Date, timezone?: string): string {
+	if (!timezone) return date.toISOString().slice(0, 10);
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(date);
+}
+
+function readHeartbeatState(path: string): HeartbeatState {
+	try {
+		const raw = readFileSync(path, "utf-8");
+		const parsed = JSON.parse(raw) as HeartbeatState;
+		return parsed ?? {};
+	} catch {
+		return {};
+	}
+}
+
+function writeHeartbeatState(path: string, state: HeartbeatState): void {
+	try {
+		writeFileSync(path, JSON.stringify(state, null, 2), "utf-8");
+	} catch {
+		// Best effort only.
+	}
+}
 
 function resolveHome(path: string): string {
 	return path.startsWith("~") ? join(homedir(), path.slice(1)) : resolve(path);
@@ -107,16 +139,27 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	toolRegistry.register(new SubagentStatusTool(subagentManager));
 
 	const workspace = resolveHome(config.agents.defaults.workspace);
+	const heartbeatStatePath = join(workspace, "memory", ".heartbeat-state.json");
+	let heartbeatState = readHeartbeatState(heartbeatStatePath);
+	let lastActiveRoute: { channel: string; chatId: string } | undefined;
 
 	let userTimezone: string | undefined;
-	try {
-		const userMd = readFileSync(join(workspace, "USER.md"), "utf-8");
-		userTimezone = parseTimezoneFromUserMd(userMd) ?? undefined;
-	} catch {
-		/* USER.md not found */
-	}
+	const refreshUserTimezone = () => {
+		try {
+			const userMd = readFileSync(join(workspace, "USER.md"), "utf-8");
+			userTimezone = parseTimezoneFromUserMd(userMd) ?? undefined;
+		} catch {
+			/* USER.md not found */
+		}
+	};
+	refreshUserTimezone();
 
-	const memoryStore = createMemoryStore(workspace);
+	const memoryStore = createMemoryStore(workspace, userTimezone);
+	const maybeSetMemoryTimezone = (timezone?: string) => {
+		const store = memoryStore as unknown as { setTimezone?: (tz?: string) => void };
+		store.setTimezone?.(timezone);
+	};
+	maybeSetMemoryTimezone(userTimezone);
 	toolRegistry.register(new RecallRecentTool({ memoryStore }));
 	const skillsLoader = createSkillsLoader({ workspacePath: workspace });
 
@@ -161,22 +204,42 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			intervalMs: config.heartbeat.intervalMs,
 			heartbeatFilePath: join(workspace, config.heartbeat.heartbeatFile),
 			onTick: async (content) => {
-				const prompt = buildHeartbeatPrompt(content);
+				const prompt = buildHeartbeatPrompt(content, userTimezone);
 				const result = await agentLoop.processDirect(prompt, {
 					sessionKey: "system:heartbeat",
 					systemPrompt: prompt,
+					skipHistory: true,
 				});
-				if (
-					result.text &&
-					!result.text.startsWith("SKIP") &&
-					config.heartbeat.notifyChannel &&
-					config.heartbeat.notifyChatId
-				) {
+				if (result.text && !result.text.startsWith("SKIP")) {
+					const now = new Date();
+					const lastSent = heartbeatState.lastProactiveSentAt
+						? new Date(heartbeatState.lastProactiveSentAt)
+						: undefined;
+					if (
+						lastSent &&
+						getDateKey(lastSent, userTimezone) === getDateKey(now, userTimezone)
+					) {
+						console.log("[metrics] proactive_blocked_daily_limit");
+						return;
+					}
+					const route =
+						config.heartbeat.notifyChannel && config.heartbeat.notifyChatId
+							? {
+									channel: config.heartbeat.notifyChannel,
+									chatId: config.heartbeat.notifyChatId,
+								}
+							: lastActiveRoute;
+					if (!route) {
+						console.warn(
+							"[heartbeat] proactive message generated but no notify route configured or discovered",
+						);
+						return;
+					}
 					await bus.publish({
 						type: "message:outbound",
 						message: createOutboundMessage({
-							channel: config.heartbeat.notifyChannel,
-							chatId: config.heartbeat.notifyChatId,
+							channel: route.channel,
+							chatId: route.chatId,
 							content: result.text,
 							replyTo: null,
 							media: [],
@@ -185,6 +248,9 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 						}),
 						timestamp: new Date(),
 					});
+					heartbeatState = { ...heartbeatState, lastProactiveSentAt: now.toISOString() };
+					writeHeartbeatState(heartbeatStatePath, heartbeatState);
+					console.log("[metrics] proactive_sent");
 				}
 			},
 		});
@@ -226,8 +292,11 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	}
 
 	bus.subscribe("message:inbound", (event) => {
+		refreshUserTimezone();
+		maybeSetMemoryTimezone(userTimezone);
 		originContext.channel = event.message.channel;
 		originContext.chatId = event.message.chatId;
+		lastActiveRoute = { channel: event.message.channel, chatId: event.message.chatId };
 		if (cronTool) {
 			cronTool.setContext(event.message.channel, event.message.chatId, userTimezone);
 		}

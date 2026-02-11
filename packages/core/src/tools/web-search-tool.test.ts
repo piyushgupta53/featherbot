@@ -169,4 +169,40 @@ describe("WebSearchTool", () => {
 		expect(result).toContain("   https://nodesc.com");
 		expect(result).not.toContain("undefined");
 	});
+
+	it("rewrites stale event year queries to current year", async () => {
+		const currentYear = new Date().getUTCFullYear();
+		const staleYear = currentYear - 1;
+		const mockFetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ web: { results: [] } }),
+		});
+		globalThis.fetch = mockFetch;
+
+		const tool = new WebSearchTool(DEFAULT_OPTIONS);
+		await tool.execute({ query: `AI summit Delhi ${staleYear}` });
+
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.stringContaining(`q=${encodeURIComponent(`AI summit Delhi ${currentYear}`)}`),
+			expect.anything(),
+		);
+	});
+
+	it("does not rewrite explicitly historical queries", async () => {
+		const currentYear = new Date().getUTCFullYear();
+		const staleYear = currentYear - 1;
+		const mockFetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ web: { results: [] } }),
+		});
+		globalThis.fetch = mockFetch;
+
+		const tool = new WebSearchTool(DEFAULT_OPTIONS);
+		await tool.execute({ query: `AI summit Delhi ${staleYear} history` });
+
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.stringContaining(`q=${encodeURIComponent(`AI summit Delhi ${staleYear} history`)}`),
+			expect.anything(),
+		);
+	});
 });

@@ -758,6 +758,25 @@ describe("AgentLoop", () => {
 			const systemMsg = opts.messages[0];
 			expect(systemMsg?.content).toContain("## Identity");
 		});
+
+		it("processDirect prepends override system prompt when context builder is active", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(join(ws, "AGENTS.md"), "Rules");
+			const generateSpy = vi.fn<GenerateFn>(async () => makeResult());
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig({ bootstrapFiles: ["AGENTS.md"] }),
+				workspacePath: ws,
+			});
+
+			await loop.processDirect("hello", { systemPrompt: "HEARTBEAT OVERRIDE" });
+			const opts = getCallOpts(generateSpy, 0);
+			const systemMsg = opts.messages[0]?.content ?? "";
+			expect(systemMsg.startsWith("HEARTBEAT OVERRIDE")).toBe(true);
+			expect(systemMsg).toContain("## Identity");
+		});
 	});
 
 	describe("session database integration", () => {

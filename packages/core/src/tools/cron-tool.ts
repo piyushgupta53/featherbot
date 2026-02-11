@@ -101,6 +101,9 @@ export class CronTool implements Tool {
 			| { kind: "at"; at: string };
 		if (p.cronExpr !== undefined) {
 			const tz = p.timezone ?? this.timezone;
+			if (!tz) {
+				console.log("[metrics] cron_timezone_fallback_no_user_timezone");
+			}
 			schedule = { kind: "cron", cronExpr: p.cronExpr, timezone: tz };
 		} else if (p.everySeconds !== undefined) {
 			schedule = { kind: "every", everySeconds: p.everySeconds };

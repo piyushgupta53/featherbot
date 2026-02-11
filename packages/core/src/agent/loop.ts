@@ -63,7 +63,11 @@ export class AgentLoop {
 	): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = (options?.sessionKey as SessionKey) ?? "direct:default";
 		const staticPrompt = options?.systemPrompt ?? this.systemPrompt;
-		const ctx = await this.resolveContext(staticPrompt);
+		const builtCtx = await this.resolveContext(staticPrompt);
+		const ctx =
+			options?.systemPrompt !== undefined && this.contextBuilder !== undefined
+				? { ...builtCtx, systemPrompt: `${options.systemPrompt}\n\n${builtCtx.systemPrompt}` }
+				: builtCtx;
 		return this.run(sessionKey, message, ctx, options?.skipHistory);
 	}
 

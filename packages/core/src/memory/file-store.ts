@@ -5,15 +5,30 @@ import type { MemoryStore } from "./types.js";
 /** Approximate token threshold (~2000 tokens ≈ 8000 chars). */
 const MEMORY_SIZE_WARNING_CHARS = 8000;
 
-export function formatDate(date: Date): string {
-	return date.toISOString().slice(0, 10);
+export function formatDate(date: Date, timezone?: string): string {
+	if (!timezone) {
+		return date.toISOString().slice(0, 10);
+	}
+	const fmt = new Intl.DateTimeFormat("en-CA", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	});
+	return fmt.format(date);
 }
 
 export class FileMemoryStore implements MemoryStore {
 	private readonly memoryDir: string;
+	private timezone?: string;
 
-	constructor(workspacePath: string) {
+	constructor(workspacePath: string, timezone?: string) {
 		this.memoryDir = join(workspacePath, "memory");
+		this.timezone = timezone;
+	}
+
+	setTimezone(timezone?: string): void {
+		this.timezone = timezone;
 	}
 
 	getMemoryFilePath(): string {
@@ -22,7 +37,7 @@ export class FileMemoryStore implements MemoryStore {
 
 	getDailyNotePath(date?: Date): string {
 		const d = date ?? new Date();
-		return join(this.memoryDir, `${formatDate(d)}.md`);
+		return join(this.memoryDir, `${formatDate(d, this.timezone)}.md`);
 	}
 
 	async getMemoryContext(): Promise<string> {
@@ -44,17 +59,17 @@ export class FileMemoryStore implements MemoryStore {
 		for (let daysAgo = 3; daysAgo >= 1; daysAgo--) {
 			const pastDate = new Date();
 			pastDate.setDate(pastDate.getDate() - daysAgo);
-			const pastContent = (await this.readFileSafe(this.getDailyNotePath(pastDate))).trim();
-			if (pastContent) {
-				const pastDateStr = formatDate(pastDate);
-				sections.push(`## Previous Notes (${pastDateStr})\n${pastContent}`);
+				const pastContent = (await this.readFileSafe(this.getDailyNotePath(pastDate))).trim();
+				if (pastContent) {
+					const pastDateStr = formatDate(pastDate, this.timezone);
+					sections.push(`## Previous Notes (${pastDateStr})\n${pastContent}`);
+				}
 			}
-		}
 
-		if (daily) {
-			const dateStr = formatDate(new Date());
-			sections.push(`## Today's Notes (${dateStr})\n${daily}`);
-		}
+			if (daily) {
+				const dateStr = formatDate(new Date(), this.timezone);
+				sections.push(`## Today's Notes (${dateStr})\n${daily}`);
+			}
 
 		return sections.join("\n\n");
 	}
@@ -64,10 +79,10 @@ export class FileMemoryStore implements MemoryStore {
 		const today = new Date();
 
 		for (let i = 0; i < days; i++) {
-			const date = new Date(today);
-			date.setDate(today.getDate() - i);
-			const dateStr = formatDate(date);
-			const content = (await this.readFileSafe(this.getDailyNotePath(date))).trim();
+				const date = new Date(today);
+				date.setDate(today.getDate() - i);
+				const dateStr = formatDate(date, this.timezone);
+				const content = (await this.readFileSafe(this.getDailyNotePath(date))).trim();
 			if (content) {
 				sections.push(`### ${dateStr}\n${content}\n`);
 			}

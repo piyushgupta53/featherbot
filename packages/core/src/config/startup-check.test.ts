@@ -138,4 +138,21 @@ describe("checkStartupConfig", () => {
 		const result = checkStartupConfig(makeConfig());
 		expect(result.warnings).toHaveLength(0);
 	});
+
+	it("warns when heartbeat notify route is not configured", () => {
+		const result = checkStartupConfig(
+			makeConfig({
+				heartbeat: {
+					enabled: true,
+					intervalMs: 600000,
+					heartbeatFile: "HEARTBEAT.md",
+					notifyChannel: undefined,
+					notifyChatId: undefined,
+				},
+			}),
+		);
+		expect(result.warnings).toEqual(
+			expect.arrayContaining([expect.stringContaining("Heartbeat notifications are not fully configured")]),
+		);
+	});
 });

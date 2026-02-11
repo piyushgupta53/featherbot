@@ -69,6 +69,8 @@ export class MemoryExtractor {
 	private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
 	private readonly running = new Set<string>();
 	private readonly lastExtraction = new Map<string, number>();
+	private readonly firstSeen = new Map<string, number>();
+	private memoryWriteQueue: Promise<void> = Promise.resolve();
 
 	constructor(options: MemoryExtractorOptions) {
 		this.provider = options.provider;
@@ -83,6 +85,10 @@ export class MemoryExtractor {
 
 	scheduleExtraction(sessionKey: string): void {
 		if (!this.enabled) return;
+		const now = Date.now();
+		if (!this.firstSeen.has(sessionKey)) {
+			this.firstSeen.set(sessionKey, now);
+		}
 
 		const existing = this.timers.get(sessionKey);
 		if (existing !== undefined) {
@@ -98,7 +104,9 @@ export class MemoryExtractor {
 
 		// Check max-age: force extraction if it's been too long
 		const lastTime = this.lastExtraction.get(sessionKey);
-		if (lastTime !== undefined && Date.now() - lastTime >= this.maxAgeMs) {
+		const firstTime = this.firstSeen.get(sessionKey);
+		const baseTime = lastTime ?? firstTime;
+		if (baseTime !== undefined && now - baseTime >= this.maxAgeMs) {
 			clearTimeout(timer);
 			this.timers.delete(sessionKey);
 			void this.extract(sessionKey);
@@ -129,6 +137,7 @@ export class MemoryExtractor {
 		if (this.running.has(sessionKey)) return;
 		this.running.add(sessionKey);
 		console.log(`[memory] extracting observations for ${sessionKey}...`);
+		console.log("[metrics] memory_extraction_attempt");
 
 		try {
 			// 1. Get conversation history
@@ -139,6 +148,7 @@ export class MemoryExtractor {
 
 			if (textMessages.length === 0) {
 				console.log(`[memory] extraction skipped for ${sessionKey} (no messages)`);
+				console.log("[metrics] memory_extraction_skipped_empty");
 				return;
 			}
 
@@ -170,63 +180,74 @@ export class MemoryExtractor {
 				extraction.observations.length === 0
 			) {
 				console.log(`[memory] extraction skipped for ${sessionKey} (nothing new)`);
+				console.log("[metrics] memory_extraction_skipped_noop");
 				this.lastExtraction.set(sessionKey, Date.now());
+				this.firstSeen.delete(sessionKey);
 				return;
 			}
 
-			// 5. Deterministic merge into MEMORY.md
-			const parsed = parseMemoryMarkdown(currentMemory);
-			const merged = mergeExtraction(parsed, extraction);
-			const rendered = renderMemoryMarkdown(merged);
-			await this.memoryStore.writeMemoryFile(rendered);
+				// 5-9. Serialize MEMORY.md writes to avoid cross-session clobbering.
+				await this.enqueueMemoryWrite(async () => {
+					const latestMemory = await this.memoryStore.readMemoryFile();
+					const parsed = parseMemoryMarkdown(latestMemory);
+					const merged = mergeExtraction(parsed, extraction);
+					const rendered = renderMemoryMarkdown(merged);
+					await this.memoryStore.writeMemoryFile(rendered);
 
-			// 6. Create/update daily note if observations exist
-			if (extraction.observations.length > 0) {
-				const today = new Date().toISOString().slice(0, 10);
-				const existingNote = await this.memoryStore.readDailyNote();
-				let noteContent: string;
-				if (existingNote.trim()) {
-					noteContent = appendToExistingNote(existingNote, sessionKey, extraction.observations);
-				} else {
-					noteContent = formatDailyNote(today, sessionKey, extraction.observations);
-				}
-				await this.memoryStore.writeDailyNote(noteContent);
-			}
+					// 6. Create/update daily note if observations exist
+					if (extraction.observations.length > 0) {
+						const todayFilename = this.memoryStore.getDailyNotePath().split(/[\\/]/).pop() ?? "";
+						const today = /^\d{4}-\d{2}-\d{2}\.md$/.test(todayFilename)
+							? todayFilename.slice(0, 10)
+							: new Date().toISOString().slice(0, 10);
+						const existingNote = await this.memoryStore.readDailyNote();
+						let noteContent: string;
+						if (existingNote.trim()) {
+							noteContent = appendToExistingNote(existingNote, sessionKey, extraction.observations);
+						} else {
+							noteContent = formatDailyNote(today, sessionKey, extraction.observations);
+						}
+						await this.memoryStore.writeDailyNote(noteContent);
+					}
 
-			// 7. Perform rollup (promote old daily note 🔴 items)
-			try {
-				const rollupResult = await performRollup(this.memoryStore);
-				if (rollupResult.promotedCount > 0) {
-					console.log(
-						`[memory] rollup promoted ${rollupResult.promotedCount} item(s), deleted ${rollupResult.deletedNotes.length} note(s)`,
-					);
-				}
-			} catch (err) {
-				console.warn("[memory] rollup failed:", err);
-			}
+					// 7. Perform rollup (promote old daily note 🔴/selected 🟡 items)
+					try {
+						const rollupResult = await performRollup(this.memoryStore);
+						if (rollupResult.promotedCount > 0) {
+							console.log(
+								`[memory] rollup promoted ${rollupResult.promotedCount} item(s), deleted ${rollupResult.deletedNotes.length} note(s)`,
+							);
+						}
+					} catch (err) {
+						console.warn("[memory] rollup failed:", err);
+					}
 
-			// 8. Compaction if MEMORY.md is too large
-			const updatedMemory = await this.memoryStore.readMemoryFile();
-			if (updatedMemory.length > this.compactionThreshold) {
-				try {
-					await this.compact(updatedMemory);
-				} catch (err) {
-					console.warn("[memory] compaction failed:", err);
-				}
-			}
+					// 8. Compaction if MEMORY.md is too large
+					const updatedMemory = await this.memoryStore.readMemoryFile();
+					if (updatedMemory.length > this.compactionThreshold) {
+						try {
+							await this.compact(updatedMemory);
+						} catch (err) {
+							console.warn("[memory] compaction failed:", err);
+						}
+					}
 
-			// 9. Cleanup old notes
-			await this.cleanupOldNotes();
+					// 9. Cleanup old notes
+					await this.cleanupOldNotes();
+				});
 
 			this.lastExtraction.set(sessionKey, Date.now());
+			this.firstSeen.delete(sessionKey);
 
 			const factCount = extraction.facts.length;
 			const obsCount = extraction.observations.length;
 			console.log(
 				`[memory] extraction complete for ${sessionKey} (${factCount} fact(s), ${obsCount} observation(s))`,
 			);
+			console.log("[metrics] memory_extraction_success");
 		} catch (err) {
 			console.error(`[memory] extraction failed for ${sessionKey}:`, err);
+			console.log("[metrics] memory_extraction_failure");
 		} finally {
 			this.running.delete(sessionKey);
 		}
@@ -269,6 +290,21 @@ export class MemoryExtractor {
 			}
 		} catch {
 			// Best-effort cleanup — swallow errors
+		}
+	}
+
+	private async enqueueMemoryWrite<T>(task: () => Promise<T>): Promise<T> {
+		let release: (() => void) | undefined;
+		const next = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const prev = this.memoryWriteQueue;
+		this.memoryWriteQueue = prev.then(() => next, () => next);
+		await prev;
+		try {
+			return await task();
+		} finally {
+			release?.();
 		}
 	}
 }
