@@ -16,6 +16,12 @@ export { resolveModel } from "./model-resolver.js";
 export { VercelLLMProvider } from "./vercel-provider.js";
 export { withRetry } from "./retry.js";
 export type { RetryOptions } from "./retry.js";
+export {
+	extractJsonFromText,
+	generateStructuredWithFallback,
+	zodSchemaToJsonExample,
+} from "./structured-fallback.js";
+export type { StructuredFallbackOptions } from "./structured-fallback.js";
 export type {
 	GenerateOptions,
 	GenerateResult,

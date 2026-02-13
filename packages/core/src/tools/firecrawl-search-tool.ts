@@ -61,13 +61,16 @@ export class FirecrawlSearchTool implements Tool {
 
 			const data = (await response.json()) as FirecrawlSearchResponse;
 
-			if (!data.success || !data.data || data.data.length === 0) {
+			// v2 API returns data as { web: [], news: [], images: [] }
+			const results = normalizeResults(data);
+
+			if (!data.success || results.length === 0) {
 				return `No results found for "${query}"`;
 			}
 
 			const lines: string[] = [`Firecrawl search results for "${query}":\n`];
-			for (let i = 0; i < data.data.length; i++) {
-				const r = data.data[i];
+			for (let i = 0; i < results.length; i++) {
+				const r = results[i];
 				if (r === undefined) continue;
 				lines.push(`--- Result ${i + 1} ---`);
 				if (r.title) lines.push(`Title: ${r.title}`);
@@ -93,10 +96,38 @@ interface FirecrawlSearchResult {
 	url?: string;
 	title?: string;
 	description?: string;
+	snippet?: string;
 	markdown?: string;
 }
 
 interface FirecrawlSearchResponse {
 	success: boolean;
-	data?: FirecrawlSearchResult[];
+	// v2 API returns { web: [], news: [], images: [] }; array kept for safety
+	data?: FirecrawlSearchResult[] | FirecrawlGroupedData;
+}
+
+interface FirecrawlGroupedData {
+	web?: FirecrawlSearchResult[];
+	news?: FirecrawlSearchResult[];
+	images?: FirecrawlSearchResult[];
+}
+
+function normalizeResults(data: FirecrawlSearchResponse): FirecrawlSearchResult[] {
+	if (!data.data) return [];
+	if (Array.isArray(data.data)) return data.data;
+
+	// Grouped format — merge web + news results
+	const grouped = data.data as FirecrawlGroupedData;
+	const results: FirecrawlSearchResult[] = [];
+	if (grouped.web) results.push(...grouped.web);
+	if (grouped.news) {
+		for (const item of grouped.news) {
+			results.push({
+				url: item.url,
+				title: item.title,
+				description: item.snippet ?? item.description,
+			});
+		}
+	}
+	return results;
 }

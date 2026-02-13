@@ -260,6 +260,7 @@ describe("MemoryExtractor", () => {
 	it("swallows generateStructured errors and logs them", async () => {
 		const error = new Error("LLM unavailable");
 		provider.generateStructured.mockRejectedValueOnce(error);
+		provider.generate.mockRejectedValueOnce(error);
 
 		const extractor = createExtractor({ idleMs: 1000 });
 

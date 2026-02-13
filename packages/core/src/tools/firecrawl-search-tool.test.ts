@@ -147,6 +147,55 @@ describe("FirecrawlSearchTool", () => {
 		expect(result).toContain("[Truncated...]");
 	});
 
+	it("handles grouped response format (data.web instead of data array)", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				success: true,
+				data: {
+					web: [
+						{
+							url: "https://example.com/cricket",
+							title: "Cricket Schedule",
+							description: "T20 World Cup schedule",
+						},
+					],
+					news: [
+						{
+							url: "https://news.example.com/t20",
+							title: "T20 Update",
+							snippet: "Latest T20 news",
+						},
+					],
+				},
+			}),
+		});
+
+		const tool = createTool();
+		const result = await tool.execute({ query: "T20 World Cup" });
+
+		expect(result).toContain("Cricket Schedule");
+		expect(result).toContain("https://example.com/cricket");
+		expect(result).toContain("T20 Update");
+		expect(result).toContain("Latest T20 news");
+		expect(result).toContain("Result 1");
+		expect(result).toContain("Result 2");
+	});
+
+	it("returns no results when grouped format has empty web array", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				success: true,
+				data: { web: [], news: [] },
+			}),
+		});
+
+		const tool = createTool();
+		const result = await tool.execute({ query: "obscure query" });
+		expect(result).toContain("No results found");
+	});
+
 	it("handles success: false response", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue({
 			ok: true,

@@ -1,3 +1,4 @@
+import { generateStructuredWithFallback } from "../provider/structured-fallback.js";
 import type { LLMMessage, LLMProvider } from "../provider/types.js";
 import { appendToExistingNote, formatDailyNote } from "./daily-note.js";
 import { CompactionResultSchema, ExtractionResultSchema } from "./extraction-schema.js";
@@ -162,7 +163,8 @@ export class MemoryExtractor {
 				...textMessages,
 			];
 
-			const result = await this.provider.generateStructured({
+			const result = await generateStructuredWithFallback({
+				provider: this.provider,
 				model: this.model,
 				messages,
 				schema: ExtractionResultSchema,
@@ -255,7 +257,8 @@ export class MemoryExtractor {
 
 	private async compact(currentContent: string): Promise<void> {
 		const prompt = buildCompactionPrompt(currentContent);
-		const result = await this.provider.generateStructured({
+		const result = await generateStructuredWithFallback({
+			provider: this.provider,
 			model: this.model,
 			messages: [{ role: "user", content: prompt }],
 			schema: CompactionResultSchema,

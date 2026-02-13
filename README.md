@@ -163,13 +163,13 @@ File-based storage in `workspace/memory/` with a two-layer persistence strategy:
 
 **Inline writes (real-time)** — The agent writes to MEMORY.md via `edit_file` during conversation when the user shares personal info or says "remember this."
 
-**Structured extraction (post-idle)** — After 5 minutes of idle (configurable), the LLM returns structured JSON via `generateStructured()` — facts, patterns, pending items, and priority-tagged observations. Code then handles persistence deterministically: parse MEMORY.md, merge with dedup, render, write. No tool calls, no prompt-following — just data in, file out.
+**Structured extraction (post-idle)** — After 5 minutes of idle (configurable), the LLM returns structured JSON via `generateStructured()` with automatic text-mode fallback for models that lack native JSON mode — facts, patterns, pending items, and priority-tagged observations. Code then handles persistence deterministically: parse MEMORY.md, merge with dedup, render, write. No tool calls, no prompt-following — just data in, file out.
 
 **Max-age safety net** — If the user chats non-stop for 30+ minutes without a gap, extraction fires immediately instead of waiting for idle.
 
 **Programmatic rollup** — After each extraction, daily notes from 1-3 days ago are scanned. Items tagged 🔴 (important) are promoted to MEMORY.md Facts with deduplication. Processed notes are deleted.
 
-**Auto-compaction** — When MEMORY.md exceeds 4000 characters, a second `generateStructured()` call consolidates: merges duplicates, removes contradictions, trims ~30%.
+**Auto-compaction** — When MEMORY.md exceeds 4000 characters, a second structured call (with the same fallback) consolidates: merges duplicates, removes contradictions, trims ~30%.
 
 **Shutdown safety** — `dispose()` force-extracts all pending sessions (10s timeout) before the process exits.
 
