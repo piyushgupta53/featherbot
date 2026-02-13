@@ -3,6 +3,8 @@ import type { FeatherBotConfig } from "../config/schema.js";
 import type { LLMProvider } from "../provider/types.js";
 import { EditFileTool } from "../tools/edit-file-tool.js";
 import { ExecTool } from "../tools/exec-tool.js";
+import { FirecrawlCrawlTool } from "../tools/firecrawl-crawl-tool.js";
+import { FirecrawlSearchTool } from "../tools/firecrawl-search-tool.js";
 import { ListDirTool } from "../tools/list-dir-tool.js";
 import { ReadFileTool } from "../tools/read-file-tool.js";
 import { ToolRegistry } from "../tools/registry.js";
@@ -121,6 +123,19 @@ export class SubagentManager {
 			new WebFetchTool({
 				maxContentLength: this.config.tools.web.fetch.maxContentLength,
 				timeoutMs: this.config.tools.web.fetch.timeoutMs,
+			}),
+		);
+		registry.register(
+			new FirecrawlSearchTool({
+				apiKey: this.config.tools.web.firecrawl.apiKey,
+				maxResults: this.config.tools.web.firecrawl.maxResults,
+			}),
+		);
+		registry.register(
+			new FirecrawlCrawlTool({
+				apiKey: this.config.tools.web.firecrawl.apiKey,
+				maxPages: this.config.tools.web.firecrawl.maxPages,
+				timeoutMs: this.config.tools.web.firecrawl.crawlTimeoutMs,
 			}),
 		);
 

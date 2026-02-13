@@ -14,7 +14,7 @@
 
 - **Multi-provider LLM support** — Anthropic (Claude), OpenAI (GPT), OpenRouter via Vercel AI SDK
 - **Messaging channels** — Telegram, WhatsApp, terminal REPL
-- **Tool system** — File I/O, shell execution, web search/fetch, cron scheduling, sub-agent spawning
+- **Tool system** — File I/O, shell execution, web search/fetch, Firecrawl search/crawl, cron scheduling, sub-agent spawning
 - **Skills** — Markdown-driven plugins with two-tier loading (always-on + lazy-loaded)
 - **Sub-agents** — Spawn background tasks with isolated tool sets and timeouts
 - **Memory** — Persistent file-based memory with deterministic structured extraction, programmatic daily note rollup, and auto-compaction
@@ -52,6 +52,7 @@ The onboard wizard will:
 3. Optionally enable Telegram and WhatsApp channels
 4. Optionally enable voice transcription (Groq or OpenAI Whisper)
 5. Optionally configure web search (Brave API key)
+6. Optionally configure Firecrawl (search + crawl API key)
 
 Configuration is saved to `~/.featherbot/config.json`.
 
@@ -112,6 +113,8 @@ Direct Baileys integration (no external bridge). Supports all message types, aut
 | `exec` | Shell command execution (60s timeout, deny-list enforced) |
 | `web_search` | Search the web via Brave Search API |
 | `web_fetch` | Fetch and extract readable content from URLs |
+| `firecrawl_search` | Search the web with full scraped content via Firecrawl |
+| `firecrawl_crawl` | Crawl a website and scrape multiple pages via Firecrawl |
 | `cron` | Manage scheduled tasks (add/list/remove/enable/disable) |
 | `recall_recent` | Retrieve past daily notes (last N days) on demand |
 | `spawn` | Spawn sub-agents for background tasks |

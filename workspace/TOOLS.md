@@ -69,12 +69,28 @@ The `days` parameter is optional (default 7, max 30).
 
 ## web_search
 
-Search the web using Brave Search API. Returns titles, URLs, descriptions.
+Search the web using Brave Search API. Returns titles, URLs, and short descriptions. Fast and lightweight — use this for quick lookups where you just need links or brief answers.
 
 Example: `web_search({ query: "weather in San Francisco" })`
 
 ## web_fetch
 
-Fetch a URL and extract readable content.
+Fetch a single URL and extract readable content. Use this when you already have a specific URL.
 
 Example: `web_fetch({ url: "https://example.com/article" })`
+
+## firecrawl_search
+
+Search the web AND scrape full page content from each result. Use this instead of web_search when you need detailed content from results (not just titles/descriptions). More thorough but uses more credits.
+
+Example: `firecrawl_search({ query: "how to configure nginx reverse proxy", limit: 3 })`
+
+**When to prefer over web_search:** Research tasks, summarizing multiple sources, when titles/descriptions aren't enough.
+
+## firecrawl_crawl
+
+Crawl a website starting from a URL — follows links and scrapes multiple pages as markdown. Use this to index documentation sites, explore a multi-page resource, or gather content from several pages of a site.
+
+Example: `firecrawl_crawl({ url: "https://docs.example.com", limit: 5 })`
+
+**When to use:** When the user asks about a website's content across multiple pages, or when you need to understand a documentation site, blog, or multi-page resource.

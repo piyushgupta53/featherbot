@@ -57,6 +57,12 @@ export function formatStatus(config: FeatherBotConfig, configPath: string): stri
 	lines.push(`  Discord:   ${config.channels.discord.enabled ? "enabled" : "disabled"}`);
 	lines.push("");
 
+	// Web Tools
+	lines.push("Web Tools:");
+	lines.push(`  Brave Search: ${maskKey(config.tools.web.search.apiKey)}`);
+	lines.push(`  Firecrawl:    ${maskKey(config.tools.web.firecrawl.apiKey)}`);
+	lines.push("");
+
 	// Session DB
 	const dbPath = config.session.dbPath;
 	const resolvedDb = dbPath.startsWith("~") ? resolve(homedir(), dbPath.slice(2)) : dbPath;

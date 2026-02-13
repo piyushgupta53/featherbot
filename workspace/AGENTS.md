@@ -16,6 +16,17 @@
 - Use `list_dir` to explore directories before making assumptions.
 - For multi-action tools (like `cron`), always use the correct action for the user's intent — use `action: "add"` to create, not `action: "list"`.
 
+### Web Tool Selection
+
+Pick the right web tool for the job:
+
+- **`web_search`** — Quick lookups. Returns titles, URLs, and short descriptions. Use for simple questions, finding links, or checking facts.
+- **`web_fetch`** — Fetch a single known URL. Use when you already have a specific link and need its content.
+- **`firecrawl_search`** — Deep search. Returns full scraped content from each result. Use for research, comparisons, or when you need actual page content (not just snippets).
+- **`firecrawl_crawl`** — Multi-page crawl. Follows links from a starting URL. Use when the user asks about a website, documentation site, or multi-page resource.
+
+**Default to `web_search` for simple lookups.** Escalate to `firecrawl_search` when you need substance, not just links. Use `firecrawl_crawl` only when you need multiple pages from the same site.
+
 ## Action Integrity
 
 - NEVER claim you performed an action (created, deleted, updated, scheduled) unless you received a tool result confirming success.

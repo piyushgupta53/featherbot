@@ -59,4 +59,52 @@ describe("web tools integration", () => {
 		expect(result).toContain("Error");
 		expect(result).toContain("Invalid URL");
 	});
+
+	it("firecrawl_search is registered in createToolRegistry", () => {
+		const registry = createToolRegistry(makeConfig());
+		expect(registry.has("firecrawl_search")).toBe(true);
+	});
+
+	it("firecrawl_crawl is registered in createToolRegistry", () => {
+		const registry = createToolRegistry(makeConfig());
+		expect(registry.has("firecrawl_crawl")).toBe(true);
+	});
+
+	it("firecrawl_search has correct parameter schema", () => {
+		const registry = createToolRegistry(makeConfig());
+		const defs = registry.getDefinitions();
+		const def = defs.find((d) => d.name === "firecrawl_search");
+		expect(def).toBeDefined();
+		const shape = def?.parameters.shape;
+		expect(shape).toHaveProperty("query");
+		expect(shape).toHaveProperty("limit");
+	});
+
+	it("firecrawl_crawl has correct parameter schema", () => {
+		const registry = createToolRegistry(makeConfig());
+		const defs = registry.getDefinitions();
+		const def = defs.find((d) => d.name === "firecrawl_crawl");
+		expect(def).toBeDefined();
+		const shape = def?.parameters.shape;
+		expect(shape).toHaveProperty("url");
+		expect(shape).toHaveProperty("limit");
+	});
+
+	it("firecrawl_search returns error when API key is missing", async () => {
+		const registry = createToolRegistry(makeConfig());
+		const result = await registry.execute("firecrawl_search", {
+			query: "test query",
+		});
+		expect(result).toContain("Error");
+		expect(result).toContain("API key");
+	});
+
+	it("firecrawl_crawl returns error when API key is missing", async () => {
+		const registry = createToolRegistry(makeConfig());
+		const result = await registry.execute("firecrawl_crawl", {
+			url: "https://example.com",
+		});
+		expect(result).toContain("Error");
+		expect(result).toContain("API key");
+	});
 });

@@ -2,6 +2,8 @@ import type { FeatherBotConfig } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
 import { EditFileTool } from "./edit-file-tool.js";
 import { ExecTool } from "./exec-tool.js";
+import { FirecrawlCrawlTool } from "./firecrawl-crawl-tool.js";
+import { FirecrawlSearchTool } from "./firecrawl-search-tool.js";
 import { ListDirTool } from "./list-dir-tool.js";
 import { ReadFileTool } from "./read-file-tool.js";
 import { RecallRecentTool } from "./recall-recent-tool.js";
@@ -46,6 +48,19 @@ export function createToolRegistry(
 			timeoutMs: config.tools.web.fetch.timeoutMs,
 		}),
 	);
+	registry.register(
+		new FirecrawlSearchTool({
+			apiKey: config.tools.web.firecrawl.apiKey,
+			maxResults: config.tools.web.firecrawl.maxResults,
+		}),
+	);
+	registry.register(
+		new FirecrawlCrawlTool({
+			apiKey: config.tools.web.firecrawl.apiKey,
+			maxPages: config.tools.web.firecrawl.maxPages,
+			timeoutMs: config.tools.web.firecrawl.crawlTimeoutMs,
+		}),
+	);
 
 	if (options?.memoryStore) {
 		registry.register(new RecallRecentTool({ memoryStore: options.memoryStore }));
@@ -55,6 +70,10 @@ export function createToolRegistry(
 }
 
 export { CronTool } from "./cron-tool.js";
+export { FirecrawlCrawlTool } from "./firecrawl-crawl-tool.js";
+export type { FirecrawlCrawlToolOptions } from "./firecrawl-crawl-tool.js";
+export { FirecrawlSearchTool } from "./firecrawl-search-tool.js";
+export type { FirecrawlSearchToolOptions } from "./firecrawl-search-tool.js";
 export { SpawnTool, SubagentStatusTool } from "./spawn-tool.js";
 export type { SpawnToolOriginContext } from "./spawn-tool.js";
 export { EditFileTool } from "./edit-file-tool.js";

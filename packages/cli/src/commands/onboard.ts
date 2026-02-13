@@ -110,7 +110,14 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 		const braveAnswer = await rl.question("Brave Search API key (Enter to skip): ");
 		braveApiKey = braveAnswer.trim();
 
-		// Step 8: Voice transcription (only if a messaging channel is enabled)
+		// Step 8: Firecrawl (search + crawl)
+		let firecrawlApiKey = "";
+		output.write("\nFirecrawl provides powerful web search with scraped content and website crawling.\n");
+		output.write("Get an API key at https://firecrawl.dev\n");
+		const firecrawlAnswer = await rl.question("Firecrawl API key (Enter to skip): ");
+		firecrawlApiKey = firecrawlAnswer.trim();
+
+		// Step 9: Voice transcription (only if a messaging channel is enabled)
 		let transcriptionEnabled = false;
 		let transcriptionProvider: "groq" | "openai" = "groq";
 		let transcriptionApiKey = "";
@@ -156,6 +163,9 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 				web: {
 					search: {
 						apiKey: braveApiKey,
+					},
+					firecrawl: {
+						apiKey: firecrawlApiKey,
 					},
 				},
 			},

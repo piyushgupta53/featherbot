@@ -50,9 +50,9 @@ describe("runOnboard", () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
-	// Flow: apiKey → confirm detection → model → telegram → whatsapp → brave key → [voice transcription if tg/wa enabled]
+	// Flow: apiKey → confirm detection → model → telegram → whatsapp → brave key → firecrawl key → [voice transcription if tg/wa enabled]
 	it("creates config with auto-detected anthropic provider", async () => {
-		const { input, output } = createStreams(["sk-ant-test-key-123", "y", "1", "n", "n", ""]);
+		const { input, output } = createStreams(["sk-ant-test-key-123", "y", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -72,7 +72,7 @@ describe("runOnboard", () => {
 	});
 
 	it("creates workspace directory with template files", async () => {
-		const { input, output } = createStreams(["sk-ant-test-key", "y", "1", "n", "n", ""]);
+		const { input, output } = createStreams(["sk-ant-test-key", "y", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -92,7 +92,7 @@ describe("runOnboard", () => {
 	});
 
 	it("auto-detects openai from sk- prefix", async () => {
-		const { input, output } = createStreams(["sk-openai-key", "y", "1", "n", "n", ""]);
+		const { input, output } = createStreams(["sk-openai-key", "y", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -109,7 +109,7 @@ describe("runOnboard", () => {
 	});
 
 	it("allows override when detection is wrong", async () => {
-		const { input, output } = createStreams(["sk-key", "n", "1", "1", "n", "n", ""]);
+		const { input, output } = createStreams(["sk-key", "n", "1", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -126,7 +126,7 @@ describe("runOnboard", () => {
 	});
 
 	it("falls back to provider menu for unrecognized key", async () => {
-		const { input, output } = createStreams(["unknown-key", "2", "1", "n", "n", ""]);
+		const { input, output } = createStreams(["unknown-key", "2", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -164,7 +164,7 @@ describe("runOnboard", () => {
 	});
 
 	it("sets model from user selection", async () => {
-		const { input, output } = createStreams(["sk-ant-key", "y", "2", "n", "n", ""]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "2", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -181,7 +181,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables telegram when user says yes", async () => {
-		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", "", "n"]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", "", "", "n"]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -199,7 +199,7 @@ describe("runOnboard", () => {
 	});
 
 	it("enables whatsapp and shows login reminder", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", "", "n"]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", "", "", "n"]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -217,7 +217,7 @@ describe("runOnboard", () => {
 	});
 
 	it("saves brave search API key when provided", async () => {
-		const { input, output } = createStreams(["sk-ant-key", "y", "1", "n", "n", "BSA-test-key"]);
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "n", "n", "BSA-test-key", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -233,6 +233,23 @@ describe("runOnboard", () => {
 		expect(config.tools.web.search.apiKey).toBe("BSA-test-key");
 	});
 
+	it("saves firecrawl API key when provided", async () => {
+		const { input, output } = createStreams(["sk-ant-key", "y", "1", "n", "n", "", "fc-test-key"]);
+		const configDir = join(testDir, "config");
+		const workspaceDir = join(testDir, "workspace");
+
+		await runOnboard({
+			configDir,
+			workspaceDir,
+			templateDir: resolve(process.cwd(), "..", "..", "workspace"),
+			input,
+			output,
+		});
+
+		const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf-8"));
+		expect(config.tools.web.firecrawl.apiKey).toBe("fc-test-key");
+	});
+
 	it("enables voice transcription with groq when user says yes", async () => {
 		const { input, output } = createStreams([
 			"sk-ant-key",
@@ -241,6 +258,7 @@ describe("runOnboard", () => {
 			"y",
 			"123:ABC",
 			"n",
+			"",
 			"",
 			"y",
 			"1",
@@ -264,7 +282,7 @@ describe("runOnboard", () => {
 	});
 
 	it("skips voice transcription when no messaging channel enabled", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", ""]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", "", ""]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -283,7 +301,7 @@ describe("runOnboard", () => {
 	});
 
 	it("prints success message with next steps", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", ""]);
+		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "n", "", ""]);
 
 		await runOnboard({
 			configDir: join(testDir, "config"),

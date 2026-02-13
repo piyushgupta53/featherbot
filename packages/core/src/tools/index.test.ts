@@ -24,7 +24,7 @@ function makeMockMemoryStore(): MemoryStore {
 }
 
 describe("createToolRegistry", () => {
-	it("returns a registry with all 7 built-in tools", () => {
+	it("returns a registry with all 9 built-in tools", () => {
 		const registry = createToolRegistry(makeConfig());
 		expect(registry.has("exec")).toBe(true);
 		expect(registry.has("read_file")).toBe(true);
@@ -33,12 +33,14 @@ describe("createToolRegistry", () => {
 		expect(registry.has("list_dir")).toBe(true);
 		expect(registry.has("web_search")).toBe(true);
 		expect(registry.has("web_fetch")).toBe(true);
+		expect(registry.has("firecrawl_search")).toBe(true);
+		expect(registry.has("firecrawl_crawl")).toBe(true);
 	});
 
-	it("has exactly 7 tool definitions without memoryStore", () => {
+	it("has exactly 9 tool definitions without memoryStore", () => {
 		const registry = createToolRegistry(makeConfig());
 		const defs = registry.getDefinitions();
-		expect(defs).toHaveLength(7);
+		expect(defs).toHaveLength(9);
 	});
 
 	it("registers recall_recent when memoryStore is provided", () => {
@@ -46,7 +48,7 @@ describe("createToolRegistry", () => {
 			memoryStore: makeMockMemoryStore(),
 		});
 		expect(registry.has("recall_recent")).toBe(true);
-		expect(registry.getDefinitions()).toHaveLength(8);
+		expect(registry.getDefinitions()).toHaveLength(10);
 	});
 
 	it("does not register recall_recent without memoryStore", () => {
