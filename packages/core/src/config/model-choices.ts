@@ -42,5 +42,15 @@ export const MODEL_CHOICES: Record<ProviderName, ModelChoice[]> = {
 			label: "GPT-4o (via OpenRouter)",
 			description: "OpenAI's best model via OpenRouter",
 		},
+		{
+			id: "openrouter/minimax/minimax-m2.5",
+			label: "MiniMax M2.5",
+			description: "Cheapest frontier model — strong agentic coding (204k ctx)",
+		},
+		{
+			id: "openrouter/moonshotai/kimi-k2.5",
+			label: "Kimi K2.5",
+			description: "Multimodal reasoning — visual coding & tool use (262k ctx)",
+		},
 	],
 };
