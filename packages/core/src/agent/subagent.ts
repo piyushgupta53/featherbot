@@ -11,6 +11,7 @@ import { ToolRegistry } from "../tools/registry.js";
 import { WebFetchTool } from "../tools/web-fetch-tool.js";
 import { WebSearchTool } from "../tools/web-search-tool.js";
 import { WriteFileTool } from "../tools/write-file-tool.js";
+import { resolveWorkspaceDirs } from "../workspace/ensure-dirs.js";
 import { AgentLoop } from "./loop.js";
 import type { SpawnOptions, SubagentState } from "./subagent-types.js";
 
@@ -100,6 +101,11 @@ export class SubagentManager {
 	private createReducedToolRegistry(): ToolRegistry {
 		const workspaceDir = this.config.agents.defaults.workspace;
 		const restrictToWorkspace = this.config.tools.restrictToWorkspace;
+		const dirs = resolveWorkspaceDirs(
+			workspaceDir,
+			this.config.agents.defaults.dataDir,
+			this.config.agents.defaults.scratchDir,
+		);
 		const registry = new ToolRegistry();
 
 		registry.register(
@@ -107,6 +113,7 @@ export class SubagentManager {
 				timeoutSeconds: this.config.tools.exec.timeout,
 				workspaceDir,
 				restrictToWorkspace,
+				defaultCwd: dirs.scratch,
 			}),
 		);
 		registry.register(new ReadFileTool({ workspaceDir, restrictToWorkspace }));

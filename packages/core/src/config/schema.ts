@@ -4,6 +4,8 @@ export const DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOL
 
 export const AgentConfigSchema = z.object({
 	workspace: z.string().default("~/.featherbot/workspace"),
+	dataDir: z.string().default("data"),
+	scratchDir: z.string().default("scratch"),
 	model: z.string().default("anthropic/claude-sonnet-4-5-20250929"),
 	maxTokens: z.number().int().positive().default(8192),
 	temperature: z.number().min(0).max(2).default(0.7),

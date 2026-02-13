@@ -7,6 +7,8 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 		agents: {
 			defaults: {
 				workspace: "~/.featherbot/workspace",
+				dataDir: "data",
+				scratchDir: "scratch",
 				model: "anthropic/claude-sonnet-4-5-20250929",
 				maxTokens: 8192,
 				temperature: 0.7,
@@ -118,6 +120,8 @@ describe("checkStartupConfig", () => {
 				agents: {
 					defaults: {
 						workspace: "~/.featherbot/workspace",
+						dataDir: "data",
+						scratchDir: "scratch",
 						model: "openai/gpt-4o",
 						maxTokens: 8192,
 						temperature: 0.7,

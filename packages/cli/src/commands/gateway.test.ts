@@ -90,6 +90,14 @@ vi.mock("@featherbot/core", () => ({
 	RecallRecentTool: vi.fn(),
 	Transcriber: vi.fn(),
 	parseTimezoneFromUserMd: vi.fn(() => null),
+	resolveWorkspaceDirs: vi.fn(() => ({
+		workspace: "/tmp/ws",
+		data: "/tmp/ws/data",
+		scratch: "/tmp/ws/scratch",
+		memory: "/tmp/ws/memory",
+	})),
+	ensureWorkspaceDirsSync: vi.fn(),
+	cleanScratchDir: vi.fn(),
 }));
 
 vi.mock("@featherbot/scheduler", () => ({
@@ -106,6 +114,8 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 		agents: {
 			defaults: {
 				workspace: "~/.featherbot/workspace",
+				dataDir: "data",
+				scratchDir: "scratch",
 				model: "anthropic/claude-sonnet-4-5-20250929",
 				maxTokens: 8192,
 				temperature: 0.7,
@@ -215,7 +225,7 @@ describe("subagent result summarization", () => {
 
 		expect(mockProcessDirect).toHaveBeenCalledWith(
 			expect.stringContaining("Research credit cards"),
-			{ sessionKey: "subagent-result:test-123" },
+			{ sessionKey: "subagent-result:test-123", skipHistory: true, maxSteps: 1 },
 		);
 
 		expect(mockPublish).toHaveBeenCalledWith(
@@ -251,6 +261,8 @@ describe("subagent result summarization", () => {
 
 		expect(mockProcessDirect).toHaveBeenCalledWith(expect.stringContaining("Fetch weather data"), {
 			sessionKey: "subagent-result:test-789",
+			skipHistory: true,
+			maxSteps: 1,
 		});
 
 		expect(mockPublish).toHaveBeenCalledWith(

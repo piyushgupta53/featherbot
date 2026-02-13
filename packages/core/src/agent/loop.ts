@@ -59,7 +59,12 @@ export class AgentLoop {
 
 	async processDirect(
 		message: string,
-		options?: { systemPrompt?: string; sessionKey?: string; skipHistory?: boolean },
+		options?: {
+			systemPrompt?: string;
+			sessionKey?: string;
+			skipHistory?: boolean;
+			maxSteps?: number;
+		},
 	): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = (options?.sessionKey as SessionKey) ?? "direct:default";
 		const staticPrompt = options?.systemPrompt ?? this.systemPrompt;
@@ -68,7 +73,7 @@ export class AgentLoop {
 			options?.systemPrompt !== undefined && this.contextBuilder !== undefined
 				? { ...builtCtx, systemPrompt: `${options.systemPrompt}\n\n${builtCtx.systemPrompt}` }
 				: builtCtx;
-		return this.run(sessionKey, message, ctx, options?.skipHistory);
+		return this.run(sessionKey, message, ctx, options?.skipHistory, options?.maxSteps);
 	}
 
 	private getOrCreateHistory(sessionKey: SessionKey): ConversationHistory {
@@ -102,6 +107,7 @@ export class AgentLoop {
 		userContent: string,
 		ctx: ContextBuilderResult,
 		skipHistory?: boolean,
+		maxStepsOverride?: number,
 	): Promise<AgentLoopResult> {
 		const history = this.getOrCreateHistory(sessionKey);
 
@@ -120,10 +126,11 @@ export class AgentLoop {
 			{ role: "user", content: userContent },
 		];
 
+		const effectiveMaxSteps = maxStepsOverride ?? config.maxToolIterations;
 		const result = await provider.generate({
 			messages,
-			tools: Object.keys(toolMap).length > 0 ? toolMap : undefined,
-			maxSteps: config.maxToolIterations,
+			tools: effectiveMaxSteps > 1 && Object.keys(toolMap).length > 0 ? toolMap : undefined,
+			maxSteps: effectiveMaxSteps,
 			temperature: config.temperature,
 			maxTokens: config.maxTokens,
 		});

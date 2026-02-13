@@ -1,5 +1,6 @@
 import type { FeatherBotConfig } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
+import { resolveWorkspaceDirs } from "../workspace/ensure-dirs.js";
 import { EditFileTool } from "./edit-file-tool.js";
 import { ExecTool } from "./exec-tool.js";
 import { FirecrawlCrawlTool } from "./firecrawl-crawl-tool.js";
@@ -22,6 +23,11 @@ export function createToolRegistry(
 ): ToolRegistry {
 	const workspaceDir = config.agents.defaults.workspace;
 	const restrictToWorkspace = config.tools.restrictToWorkspace;
+	const dirs = resolveWorkspaceDirs(
+		workspaceDir,
+		config.agents.defaults.dataDir,
+		config.agents.defaults.scratchDir,
+	);
 
 	const registry = new ToolRegistry();
 
@@ -30,6 +36,7 @@ export function createToolRegistry(
 			timeoutSeconds: config.tools.exec.timeout,
 			workspaceDir,
 			restrictToWorkspace,
+			defaultCwd: dirs.scratch,
 		}),
 	);
 	registry.register(new ReadFileTool({ workspaceDir, restrictToWorkspace }));

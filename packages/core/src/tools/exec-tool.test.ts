@@ -145,5 +145,38 @@ describe("ExecTool", () => {
 			const result = await tool.execute({ command: "pwd", workingDir: tempDir });
 			expect(result).toBe(tempDir);
 		});
+
+		it("uses defaultCwd when no workingDir is provided", async () => {
+			const tool = new ExecTool({
+				timeoutSeconds: 60,
+				workspaceDir: tempDir,
+				restrictToWorkspace: false,
+				defaultCwd: tempDir,
+			});
+			const result = await tool.execute({ command: "pwd" });
+			expect(result).toBe(tempDir);
+		});
+
+		it("prefers workingDir over defaultCwd", async () => {
+			const tool = new ExecTool({
+				timeoutSeconds: 60,
+				workspaceDir: tempDir,
+				restrictToWorkspace: false,
+				defaultCwd: "/tmp",
+			});
+			const result = await tool.execute({ command: "pwd", workingDir: tempDir });
+			expect(result).toBe(tempDir);
+		});
+
+		it("prefers restrictToWorkspace over defaultCwd", async () => {
+			const tool = new ExecTool({
+				timeoutSeconds: 60,
+				workspaceDir: tempDir,
+				restrictToWorkspace: true,
+				defaultCwd: "/tmp",
+			});
+			const result = await tool.execute({ command: "pwd" });
+			expect(result).toBe(tempDir);
+		});
 	});
 });

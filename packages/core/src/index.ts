@@ -185,3 +185,6 @@ export type {
 	GatewayHeartbeatService,
 	GatewayOptions,
 } from "./gateway/index.js";
+export { cleanScratchDir } from "./workspace/scratch-cleaner.js";
+export { ensureWorkspaceDirsSync, resolveWorkspaceDirs } from "./workspace/ensure-dirs.js";
+export type { WorkspaceDirs } from "./workspace/ensure-dirs.js";

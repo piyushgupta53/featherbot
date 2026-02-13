@@ -101,6 +101,12 @@ export class ContextBuilder {
 		lines.push(`Node.js: ${process.version}`);
 		lines.push(`Platform: ${platform()}`);
 		lines.push(`Workspace: ${this.workspacePath}`);
+		lines.push("");
+		lines.push("Workspace layout:");
+		lines.push("- data/ — persistent outputs (scripts, exports, saved files)");
+		lines.push("- scratch/ — temp work area, auto-cleaned. Default cwd for exec.");
+		lines.push("- memory/ — memory files (managed automatically)");
+		lines.push("- Do not create files in workspace root.");
 		return lines.join("\n");
 	}
 

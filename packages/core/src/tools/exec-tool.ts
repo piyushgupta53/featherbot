@@ -20,12 +20,13 @@ export interface ExecToolOptions {
 	timeoutSeconds: number;
 	workspaceDir: string;
 	restrictToWorkspace: boolean;
+	defaultCwd?: string;
 }
 
 export class ExecTool implements Tool {
 	readonly name = "exec";
 	readonly description =
-		"Execute a shell command and return the output. Use this to run CLI tools, scripts, and system commands.";
+		"Execute a shell command and return the output. Use this to run CLI tools, scripts, and system commands. Defaults to the scratch/ directory when no workingDir is specified.";
 	readonly parameters = z.object({
 		command: z.string().describe("The shell command to execute"),
 		workingDir: z.string().optional().describe("Working directory for the command"),
@@ -50,6 +51,8 @@ export class ExecTool implements Tool {
 			cwd = resolvePath(workingDir, this.options.workspaceDir);
 		} else if (this.options.restrictToWorkspace) {
 			cwd = resolvePath(this.options.workspaceDir, this.options.workspaceDir);
+		} else if (this.options.defaultCwd !== undefined) {
+			cwd = this.options.defaultCwd;
 		}
 
 		return new Promise<string>((resolve) => {

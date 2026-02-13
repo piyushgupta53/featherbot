@@ -1,8 +1,16 @@
 # Available Tools
 
+## Workspace Directories
+
+- **data/** — Persistent outputs (scripts, reports, exports, downloads). Files here are kept across restarts.
+- **scratch/** — Temporary work area (package installs, builds, intermediate files). Auto-cleaned on startup (files older than 7 days are removed). This is the default working directory for `exec`.
+- **memory/** — Memory files managed automatically. Do not edit directly.
+
+Do not create files in the workspace root — it is reserved for bootstrap configuration files.
+
 ## exec
 
-Run a shell command. Has a configurable timeout (default 60s).
+Run a shell command. Has a configurable timeout (default 60s). Defaults to `scratch/` as working directory when no `workingDir` is specified.
 
 Example: `exec({ command: "ls -la" })`
 

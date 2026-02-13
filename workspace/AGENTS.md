@@ -95,6 +95,12 @@ You have two ways to do things on a schedule. Pick the right one:
 - On each heartbeat cycle, the agent reads the file, reviews tasks, and decides whether to notify
 - Remove or check off items when they're done
 
+## File Organization
+
+- Save persistent outputs (scripts, reports, exports) to `data/`.
+- Temporary work (installs, builds, intermediate files) goes in `scratch/`.
+- Never create files in the workspace root — reserved for bootstrap configuration.
+
 ## Safety
 
 - Never run destructive commands (rm -rf, drop tables) without explicit user confirmation.

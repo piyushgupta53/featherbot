@@ -17,6 +17,8 @@ type GenerateFn = (options: GenerateOptions) => Promise<GenerateResult>;
 function makeConfig(overrides?: Partial<AgentConfig>): AgentConfig {
 	return {
 		workspace: "~/.featherbot/workspace",
+		dataDir: "data",
+		scratchDir: "scratch",
 		model: "anthropic/claude-sonnet-4-5-20250929",
 		maxTokens: 8192,
 		temperature: 0.7,

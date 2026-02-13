@@ -327,8 +327,8 @@ describe("ContextBuilder", () => {
 			const parts = systemPrompt.split("\n\n");
 			expect(parts.length).toBeGreaterThanOrEqual(3);
 			expect(parts[0]).toContain("## Identity");
-			expect(parts[1]).toContain("## SOUL.md");
-			expect(parts[2]).toContain("## Session");
+			expect(systemPrompt).toContain("## SOUL.md");
+			expect(systemPrompt).toContain("## Session");
 		});
 
 		it("full integration: all sections present produce expected prompt", async () => {

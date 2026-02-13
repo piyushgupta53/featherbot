@@ -27,9 +27,12 @@ import {
 	createProvider,
 	createSkillsLoader,
 	createToolRegistry,
+	ensureWorkspaceDirsSync,
 	loadConfig,
 	parseTimezoneFromUserMd,
+	resolveWorkspaceDirs,
 } from "@featherbot/core";
+import { cleanScratchDir } from "@featherbot/core";
 import type { FeatherBotConfig, SpawnToolOriginContext } from "@featherbot/core";
 import { CronService, HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
 import type { Command } from "commander";
@@ -112,6 +115,8 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			const prompt = buildSubagentResultPrompt(state);
 			const result = await agentLoop.processDirect(prompt, {
 				sessionKey: `subagent-result:${state.id}`,
+				skipHistory: true,
+				maxSteps: 1,
 			});
 			content = result.text || `Background task ${state.status}: ${state.task}`;
 		} catch {
@@ -139,6 +144,13 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	toolRegistry.register(new SubagentStatusTool(subagentManager));
 
 	const workspace = resolveHome(config.agents.defaults.workspace);
+	const wsDirs = resolveWorkspaceDirs(
+		workspace,
+		config.agents.defaults.dataDir,
+		config.agents.defaults.scratchDir,
+	);
+	ensureWorkspaceDirsSync(wsDirs);
+	cleanScratchDir(wsDirs.scratch);
 	const heartbeatStatePath = join(workspace, "memory", ".heartbeat-state.json");
 	let heartbeatState = readHeartbeatState(heartbeatStatePath);
 	let lastActiveRoute: { channel: string; chatId: string } | undefined;

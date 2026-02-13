@@ -182,6 +182,8 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 		writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
 
 		mkdirSync(resolve(workspaceDir, "memory"), { recursive: true });
+		mkdirSync(resolve(workspaceDir, "data"), { recursive: true });
+		mkdirSync(resolve(workspaceDir, "scratch"), { recursive: true });
 		cpSync(templateDir, workspaceDir, { recursive: true });
 
 		output.write("\nSetup complete!\n\n");

@@ -62,7 +62,7 @@ This project uses a structured iterative build process driven by three skills:
 ### Project Structure
 ```
 packages/
-  core/src/          # Agent engine (loop, context, tools, memory, skills, session, provider, config)
+  core/src/          # Agent engine (loop, context, tools, memory, skills, session, provider, config, workspace)
   channels/src/      # Channel implementations (base, manager, telegram, whatsapp, discord, terminal)
   bus/src/           # Message bus (bus, types)
   scheduler/src/     # Cron + heartbeat

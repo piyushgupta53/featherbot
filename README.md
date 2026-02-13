@@ -110,7 +110,7 @@ Direct Baileys integration (no external bridge). Supports all message types, aut
 | `write_file` | Write/create files (auto-creates parent directories) |
 | `edit_file` | Find-and-replace editing with ambiguity rejection |
 | `list_dir` | List directory contents |
-| `exec` | Shell command execution (60s timeout, deny-list enforced) |
+| `exec` | Shell command execution (60s timeout, deny-list enforced, defaults to `scratch/`) |
 | `web_search` | Search the web via Brave Search API |
 | `web_fetch` | Fetch and extract readable content from URLs |
 | `firecrawl_search` | Search the web with full scraped content via Firecrawl |
@@ -150,7 +150,7 @@ When a user sends multiple messages in quick succession (e.g. "check my calendar
 
 ## Sub-agents
 
-Spawn background tasks with isolated tool sets (no message, spawn, or cron tools to prevent recursion). Sub-agents have configurable max iterations (default: 15) and timeout (default: 5 minutes). Results are routed back to the originating channel.
+Spawn background tasks with isolated tool sets (no message, spawn, or cron tools to prevent recursion). Sub-agents have configurable max iterations (default: 15) and timeout (default: 5 minutes). Results are summarized in a tool-free pass (no spawning during summarization) and routed back to the originating channel.
 
 ## Memory
 
@@ -248,19 +248,25 @@ workspace/
 ├── USER.md         # User profile (name, timezone, preferences)
 ├── TOOLS.md        # Tool documentation
 ├── HEARTBEAT.md    # Periodic tasks and proactive review instructions
-└── memory/
-    ├── MEMORY.md       # Long-term memory
-    └── YYYY-MM-DD.md   # Daily notes (auto-created)
+├── data/           # Persistent agent outputs (scripts, reports, exports)
+├── scratch/        # Temp work area (default cwd for exec, auto-cleaned on startup)
+├── memory/
+│   ├── MEMORY.md       # Long-term memory
+│   └── YYYY-MM-DD.md   # Daily notes (auto-created)
+└── skills/         # User-defined skills
 ```
 
-Edit these files to customize your agent's personality, behavior, and proactive capabilities.
+- **Config files** (root) — bootstrap markdown files, edited to customize personality and behavior
+- **data/** — persistent outputs the agent creates (scripts, reports, downloads)
+- **scratch/** — throwaway work area; files older than 7 days are removed on startup
+- **memory/** — managed automatically by the memory system
 
 ## Development
 
 ```bash
 pnpm install          # Install dependencies
 pnpm build            # Build all packages
-pnpm test             # Run all tests (735 tests)
+pnpm test             # Run all tests (807 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```
