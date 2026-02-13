@@ -9,7 +9,9 @@ function normalizeYearForRecency(query: string): { effectiveQuery: string; rewri
 	if (yearMatches.length === 0) {
 		return { effectiveQuery: query, rewritten: false };
 	}
-	const hasPastIntent = /\b(history|historical|archive|archived|last year|previous year)\b/i.test(query);
+	const hasPastIntent = /\b(history|historical|archive|archived|last year|previous year)\b/i.test(
+		query,
+	);
 	if (hasPastIntent) {
 		return { effectiveQuery: query, rewritten: false };
 	}
@@ -64,7 +66,9 @@ export class WebSearchTool implements Tool {
 		};
 		const { effectiveQuery, rewritten } = normalizeYearForRecency(query);
 		if (rewritten) {
-			console.log(`[metrics] web_search_query_rewritten_year from="${query}" to="${effectiveQuery}"`);
+			console.log(
+				`[metrics] web_search_query_rewritten_year from="${query}" to="${effectiveQuery}"`,
+			);
 		}
 
 		if (this.options.apiKey === "") {
@@ -90,10 +94,10 @@ export class WebSearchTool implements Tool {
 			const results = data.web?.results;
 
 			if (results === undefined || results.length === 0) {
-					return `No results found for "${effectiveQuery}"`;
-				}
+				return `No results found for "${effectiveQuery}"`;
+			}
 
-				const lines: string[] = [`Search results for "${effectiveQuery}":\n`];
+			const lines: string[] = [`Search results for "${effectiveQuery}":\n`];
 			for (let i = 0; i < results.length; i++) {
 				const r = results[i];
 				if (r === undefined) continue;

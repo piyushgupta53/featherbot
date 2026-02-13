@@ -36,31 +36,35 @@ export function createToolRegistry(
 	registry.register(new WriteFileTool({ workspaceDir, restrictToWorkspace }));
 	registry.register(new EditFileTool({ workspaceDir, restrictToWorkspace }));
 	registry.register(new ListDirTool({ workspaceDir, restrictToWorkspace }));
-	registry.register(
-		new WebSearchTool({
-			apiKey: config.tools.web.search.apiKey,
-			maxResults: config.tools.web.search.maxResults,
-		}),
-	);
+	if (config.tools.web.search.apiKey) {
+		registry.register(
+			new WebSearchTool({
+				apiKey: config.tools.web.search.apiKey,
+				maxResults: config.tools.web.search.maxResults,
+			}),
+		);
+	}
 	registry.register(
 		new WebFetchTool({
 			maxContentLength: config.tools.web.fetch.maxContentLength,
 			timeoutMs: config.tools.web.fetch.timeoutMs,
 		}),
 	);
-	registry.register(
-		new FirecrawlSearchTool({
-			apiKey: config.tools.web.firecrawl.apiKey,
-			maxResults: config.tools.web.firecrawl.maxResults,
-		}),
-	);
-	registry.register(
-		new FirecrawlCrawlTool({
-			apiKey: config.tools.web.firecrawl.apiKey,
-			maxPages: config.tools.web.firecrawl.maxPages,
-			timeoutMs: config.tools.web.firecrawl.crawlTimeoutMs,
-		}),
-	);
+	if (config.tools.web.firecrawl.apiKey) {
+		registry.register(
+			new FirecrawlSearchTool({
+				apiKey: config.tools.web.firecrawl.apiKey,
+				maxResults: config.tools.web.firecrawl.maxResults,
+			}),
+		);
+		registry.register(
+			new FirecrawlCrawlTool({
+				apiKey: config.tools.web.firecrawl.apiKey,
+				maxPages: config.tools.web.firecrawl.maxPages,
+				timeoutMs: config.tools.web.firecrawl.crawlTimeoutMs,
+			}),
+		);
+	}
 
 	if (options?.memoryStore) {
 		registry.register(new RecallRecentTool({ memoryStore: options.memoryStore }));

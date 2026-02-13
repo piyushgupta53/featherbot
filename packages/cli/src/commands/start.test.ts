@@ -139,6 +139,7 @@ describe("runStart", () => {
 				web: {
 					search: { apiKey: "", maxResults: 5 },
 					fetch: { maxContentLength: 50000, timeoutMs: 30000 },
+					firecrawl: { apiKey: "", maxResults: 5, maxPages: 5, crawlTimeoutMs: 60000 },
 				},
 				exec: { timeout: 60 },
 				restrictToWorkspace: false,

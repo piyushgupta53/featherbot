@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { FeatherBotConfig } from "../config/schema.js";
 import { FeatherBotConfigSchema } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
 import { createToolRegistry } from "./index.js";
 
-function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
+function makeConfig(overrides?: Record<string, unknown>) {
 	return FeatherBotConfigSchema.parse(overrides ?? {});
 }
 
@@ -24,27 +23,63 @@ function makeMockMemoryStore(): MemoryStore {
 }
 
 describe("createToolRegistry", () => {
-	it("returns a registry with all 9 built-in tools", () => {
+	it("returns a registry with core tools (no API keys = no search tools)", () => {
 		const registry = createToolRegistry(makeConfig());
 		expect(registry.has("exec")).toBe(true);
 		expect(registry.has("read_file")).toBe(true);
 		expect(registry.has("write_file")).toBe(true);
 		expect(registry.has("edit_file")).toBe(true);
 		expect(registry.has("list_dir")).toBe(true);
-		expect(registry.has("web_search")).toBe(true);
 		expect(registry.has("web_fetch")).toBe(true);
-		expect(registry.has("firecrawl_search")).toBe(true);
-		expect(registry.has("firecrawl_crawl")).toBe(true);
+		expect(registry.has("web_search")).toBe(false);
+		expect(registry.has("firecrawl_search")).toBe(false);
+		expect(registry.has("firecrawl_crawl")).toBe(false);
 	});
 
-	it("has exactly 9 tool definitions without memoryStore", () => {
+	it("has 6 tool definitions without API keys or memoryStore", () => {
 		const registry = createToolRegistry(makeConfig());
 		const defs = registry.getDefinitions();
-		expect(defs).toHaveLength(9);
+		expect(defs).toHaveLength(6);
+	});
+
+	it("registers web_search when Brave API key is configured", () => {
+		const config = makeConfig({ tools: { web: { search: { apiKey: "test-brave-key" } } } });
+		const registry = createToolRegistry(config);
+		expect(registry.has("web_search")).toBe(true);
+		expect(registry.getDefinitions()).toHaveLength(7);
+	});
+
+	it("registers firecrawl tools when Firecrawl API key is configured", () => {
+		const config = makeConfig({ tools: { web: { firecrawl: { apiKey: "fc-test-key" } } } });
+		const registry = createToolRegistry(config);
+		expect(registry.has("firecrawl_search")).toBe(true);
+		expect(registry.has("firecrawl_crawl")).toBe(true);
+		expect(registry.getDefinitions()).toHaveLength(8);
+	});
+
+	it("registers all tools when all API keys are configured", () => {
+		const config = makeConfig({
+			tools: {
+				web: {
+					search: { apiKey: "brave-key" },
+					firecrawl: { apiKey: "fc-key" },
+				},
+			},
+		});
+		const registry = createToolRegistry(config);
+		expect(registry.getDefinitions()).toHaveLength(9);
 	});
 
 	it("registers recall_recent when memoryStore is provided", () => {
-		const registry = createToolRegistry(makeConfig(), {
+		const config = makeConfig({
+			tools: {
+				web: {
+					search: { apiKey: "brave-key" },
+					firecrawl: { apiKey: "fc-key" },
+				},
+			},
+		});
+		const registry = createToolRegistry(config, {
 			memoryStore: makeMockMemoryStore(),
 		});
 		expect(registry.has("recall_recent")).toBe(true);

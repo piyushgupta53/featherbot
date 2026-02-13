@@ -1,4 +1,7 @@
-function localDateParts(date: Date, timezone?: string): {
+function localDateParts(
+	date: Date,
+	timezone?: string,
+): {
 	timestamp: string;
 	dayOfWeek: string;
 	timezoneLabel: string;

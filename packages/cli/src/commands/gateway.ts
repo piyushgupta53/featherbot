@@ -215,10 +215,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					const lastSent = heartbeatState.lastProactiveSentAt
 						? new Date(heartbeatState.lastProactiveSentAt)
 						: undefined;
-					if (
-						lastSent &&
-						getDateKey(lastSent, userTimezone) === getDateKey(now, userTimezone)
-					) {
+					if (lastSent && getDateKey(lastSent, userTimezone) === getDateKey(now, userTimezone)) {
 						console.log("[metrics] proactive_blocked_daily_limit");
 						return;
 					}

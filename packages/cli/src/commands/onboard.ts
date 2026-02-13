@@ -112,7 +112,9 @@ export async function runOnboard(options: OnboardOptions = {}): Promise<void> {
 
 		// Step 8: Firecrawl (search + crawl)
 		let firecrawlApiKey = "";
-		output.write("\nFirecrawl provides powerful web search with scraped content and website crawling.\n");
+		output.write(
+			"\nFirecrawl provides powerful web search with scraped content and website crawling.\n",
+		);
 		output.write("Get an API key at https://firecrawl.dev\n");
 		const firecrawlAnswer = await rl.question("Firecrawl API key (Enter to skip): ");
 		firecrawlApiKey = firecrawlAnswer.trim();

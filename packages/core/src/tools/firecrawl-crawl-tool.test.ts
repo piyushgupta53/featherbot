@@ -73,7 +73,8 @@ describe("FirecrawlCrawlTool", () => {
 			}),
 		);
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+		const body = JSON.parse(init.body as string);
 		expect(body.url).toBe("https://example.com");
 		expect(body.limit).toBe(3);
 	});
@@ -220,17 +221,16 @@ describe("FirecrawlCrawlTool", () => {
 		await vi.advanceTimersByTimeAsync(3000);
 		await resultPromise;
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+		const body = JSON.parse(init.body as string);
 		expect(body.limit).toBe(10);
 	});
 
 	it("returns timeout error when crawl exceeds timeoutMs", async () => {
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ success: true, id: "job-slow" }),
-			});
+		const mockFetch = vi.fn().mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ success: true, id: "job-slow" }),
+		});
 		// All polls return "scraping" so it never completes
 		for (let i = 0; i < 20; i++) {
 			mockFetch.mockResolvedValueOnce({

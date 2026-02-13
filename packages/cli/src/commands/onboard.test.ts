@@ -181,7 +181,17 @@ describe("runOnboard", () => {
 	});
 
 	it("enables telegram when user says yes", async () => {
-		const { input, output } = createStreams(["sk-ant-key", "y", "1", "y", "123:ABC", "n", "", "", "n"]);
+		const { input, output } = createStreams([
+			"sk-ant-key",
+			"y",
+			"1",
+			"y",
+			"123:ABC",
+			"n",
+			"",
+			"",
+			"n",
+		]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 
@@ -199,7 +209,16 @@ describe("runOnboard", () => {
 	});
 
 	it("enables whatsapp and shows login reminder", async () => {
-		const { input, output, getOutput } = createStreams(["sk-ant-key", "y", "1", "n", "y", "", "", "n"]);
+		const { input, output, getOutput } = createStreams([
+			"sk-ant-key",
+			"y",
+			"1",
+			"n",
+			"y",
+			"",
+			"",
+			"n",
+		]);
 		const configDir = join(testDir, "config");
 		const workspaceDir = join(testDir, "workspace");
 

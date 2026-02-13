@@ -103,12 +103,15 @@ export async function runRepl(): Promise<void> {
 	validateOrExit(config);
 	const workspace = resolveHome(config.agents.defaults.workspace);
 	let userTimezone: string | undefined;
-	try {
-		const userMd = readFileSync(join(workspace, "USER.md"), "utf-8");
-		userTimezone = parseTimezoneFromUserMd(userMd) ?? undefined;
-	} catch {
-		/* USER.md missing */
-	}
+	const refreshUserTimezone = () => {
+		try {
+			const userMd = readFileSync(join(workspace, "USER.md"), "utf-8");
+			userTimezone = parseTimezoneFromUserMd(userMd) ?? undefined;
+		} catch {
+			/* USER.md missing */
+		}
+	};
+	refreshUserTimezone();
 
 	const provider = createProvider(config);
 	const toolRegistry = createToolRegistry(config);
@@ -132,6 +135,7 @@ export async function runRepl(): Promise<void> {
 	const heartbeatStatePath = join(workspace, "memory", ".heartbeat-state.json");
 	let heartbeatState = readHeartbeatState(heartbeatStatePath);
 	let heartbeatService: HeartbeatService | undefined;
+	// biome-ignore lint/style/useConst: assigned after TerminalChannel closure captures it
 	let memoryExtractor: MemoryExtractor | undefined;
 	const terminal = new TerminalChannel({
 		bus,

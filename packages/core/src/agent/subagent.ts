@@ -113,31 +113,35 @@ export class SubagentManager {
 		registry.register(new WriteFileTool({ workspaceDir, restrictToWorkspace }));
 		registry.register(new EditFileTool({ workspaceDir, restrictToWorkspace }));
 		registry.register(new ListDirTool({ workspaceDir, restrictToWorkspace }));
-		registry.register(
-			new WebSearchTool({
-				apiKey: this.config.tools.web.search.apiKey,
-				maxResults: this.config.tools.web.search.maxResults,
-			}),
-		);
+		if (this.config.tools.web.search.apiKey) {
+			registry.register(
+				new WebSearchTool({
+					apiKey: this.config.tools.web.search.apiKey,
+					maxResults: this.config.tools.web.search.maxResults,
+				}),
+			);
+		}
 		registry.register(
 			new WebFetchTool({
 				maxContentLength: this.config.tools.web.fetch.maxContentLength,
 				timeoutMs: this.config.tools.web.fetch.timeoutMs,
 			}),
 		);
-		registry.register(
-			new FirecrawlSearchTool({
-				apiKey: this.config.tools.web.firecrawl.apiKey,
-				maxResults: this.config.tools.web.firecrawl.maxResults,
-			}),
-		);
-		registry.register(
-			new FirecrawlCrawlTool({
-				apiKey: this.config.tools.web.firecrawl.apiKey,
-				maxPages: this.config.tools.web.firecrawl.maxPages,
-				timeoutMs: this.config.tools.web.firecrawl.crawlTimeoutMs,
-			}),
-		);
+		if (this.config.tools.web.firecrawl.apiKey) {
+			registry.register(
+				new FirecrawlSearchTool({
+					apiKey: this.config.tools.web.firecrawl.apiKey,
+					maxResults: this.config.tools.web.firecrawl.maxResults,
+				}),
+			);
+			registry.register(
+				new FirecrawlCrawlTool({
+					apiKey: this.config.tools.web.firecrawl.apiKey,
+					maxPages: this.config.tools.web.firecrawl.maxPages,
+					timeoutMs: this.config.tools.web.firecrawl.crawlTimeoutMs,
+				}),
+			);
+		}
 
 		return registry;
 	}

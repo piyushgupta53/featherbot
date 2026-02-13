@@ -53,7 +53,8 @@ describe("FirecrawlSearchTool", () => {
 			}),
 		);
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+		const body = JSON.parse(init.body as string);
 		expect(body.query).toBe("test query");
 		expect(body.limit).toBe(3);
 	});
@@ -126,7 +127,8 @@ describe("FirecrawlSearchTool", () => {
 		const tool = new FirecrawlSearchTool({ apiKey: "fc-key", maxResults: 7 });
 		await tool.execute({ query: "test" });
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+		const body = JSON.parse(init.body as string);
 		expect(body.limit).toBe(7);
 	});
 

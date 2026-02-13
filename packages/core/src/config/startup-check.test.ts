@@ -28,6 +28,7 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 			web: {
 				search: { apiKey: "", maxResults: 5 },
 				fetch: { maxContentLength: 50000, timeoutMs: 30000 },
+				firecrawl: { apiKey: "", maxResults: 5, maxPages: 5, crawlTimeoutMs: 60000 },
 			},
 			exec: { timeout: 60 },
 			restrictToWorkspace: false,
@@ -152,7 +153,9 @@ describe("checkStartupConfig", () => {
 			}),
 		);
 		expect(result.warnings).toEqual(
-			expect.arrayContaining([expect.stringContaining("Heartbeat notifications are not fully configured")]),
+			expect.arrayContaining([
+				expect.stringContaining("Heartbeat notifications are not fully configured"),
+			]),
 		);
 	});
 });
