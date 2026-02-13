@@ -59,6 +59,22 @@ Remove a job: `cron({ action: "remove", jobId: "the-job-id" })`
 
 **Important:** To create a job you MUST use `action: "add"`. Listing does not create anything.
 
+## spawn
+
+Run a task in the background using a sub-agent. The sub-agent has access to exec, read_file, write_file, edit_file, and list_dir. Results are delivered back to the user's channel when complete.
+
+Example: `spawn({ task: "Search for the latest Node.js LTS version and summarize what's new" })`
+
+Returns immediately — the user gets a response right away while the sub-agent works.
+
+## subagent_status
+
+Check on background sub-agents. Omit `id` to list all active tasks, or provide one to check a specific task.
+
+Examples:
+- `subagent_status({})` — list all active sub-agents
+- `subagent_status({ id: "some-task-id" })` — check a specific task
+
 ## recall_recent
 
 Retrieve daily notes from recent days. Use this to recall what happened in past sessions.
