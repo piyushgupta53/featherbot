@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { FeatherBotConfig } from "../config/schema.js";
 import type { MemoryStore } from "../memory/types.js";
 import { resolveWorkspaceDirs } from "../workspace/ensure-dirs.js";
@@ -9,6 +10,7 @@ import { ListDirTool } from "./list-dir-tool.js";
 import { ReadFileTool } from "./read-file-tool.js";
 import { RecallRecentTool } from "./recall-recent-tool.js";
 import { ToolRegistry } from "./registry.js";
+import { TodoTool } from "./todo-tool.js";
 import { WebFetchTool } from "./web-fetch-tool.js";
 import { WebSearchTool } from "./web-search-tool.js";
 import { WriteFileTool } from "./write-file-tool.js";
@@ -30,6 +32,11 @@ export function createToolRegistry(
 	);
 
 	const registry = new ToolRegistry();
+
+	registry.setEvictionOptions({
+		threshold: config.tools.resultEvictionThreshold,
+		scratchPath: dirs.scratch,
+	});
 
 	registry.register(
 		new ExecTool({
@@ -77,6 +84,12 @@ export function createToolRegistry(
 		registry.register(new RecallRecentTool({ memoryStore: options.memoryStore }));
 	}
 
+	registry.register(
+		new TodoTool({
+			filePath: join(dirs.data, "todos.json"),
+		}),
+	);
+
 	return registry;
 }
 
@@ -106,5 +119,7 @@ export { WebFetchTool } from "./web-fetch-tool.js";
 export type { WebFetchToolOptions } from "./web-fetch-tool.js";
 export { WebSearchTool } from "./web-search-tool.js";
 export type { WebSearchToolOptions } from "./web-search-tool.js";
+export { TodoTool } from "./todo-tool.js";
+export type { TodoToolOptions, TodoItem } from "./todo-tool.js";
 export { WriteFileTool } from "./write-file-tool.js";
 export type { WriteFileToolOptions } from "./write-file-tool.js";

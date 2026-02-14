@@ -34,8 +34,9 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 			},
 			exec: { timeout: 60 },
 			restrictToWorkspace: false,
+			resultEvictionThreshold: 20000,
 		},
-		session: { dbPath: "", maxMessages: 50 },
+		session: { dbPath: "", maxMessages: 50, summarizationEnabled: true },
 		cron: { enabled: false, storePath: "" },
 		heartbeat: {
 			enabled: false,

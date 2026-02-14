@@ -133,6 +133,7 @@ export {
 	createMemoryStore,
 	FileMemoryStore,
 	MemoryExtractor,
+	containsCorrectionSignal,
 	ExtractionResultSchema,
 	CompactionResultSchema,
 	parseMemoryMarkdown,

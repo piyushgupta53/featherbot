@@ -41,6 +41,10 @@ export function parseModelString(modelString: string): {
 	return { providerName: "openrouter", modelId: modelString };
 }
 
+export function getProviderName(modelString: string): ProviderName {
+	return parseModelString(modelString).providerName;
+}
+
 export function resolveModel(modelString: string, providerConfig: ProviderConfig): LanguageModel {
 	const { providerName, modelId } = parseModelString(modelString);
 

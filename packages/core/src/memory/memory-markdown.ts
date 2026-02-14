@@ -1,4 +1,4 @@
-import type { ExtractionResult } from "./extraction-schema.js";
+import type { Correction, ExtractionResult } from "./extraction-schema.js";
 
 export interface ParsedMemory {
 	facts: string[];
@@ -144,11 +144,36 @@ function isResolved(pendingItem: string, resolvedList: string[]): boolean {
 	});
 }
 
+/**
+ * Apply corrections by removing facts that match the "wrong" side
+ * and adding the "right" side as a new fact.
+ */
+function applyCorrections(facts: string[], corrections: Correction[]): string[] {
+	if (corrections.length === 0) return facts;
+
+	let result = [...facts];
+	for (const correction of corrections) {
+		const normalizedWrong = normalize(correction.wrong);
+		// Remove any fact that contains the wrong information
+		result = result.filter((f) => {
+			const normalizedFact = normalize(f);
+			return !normalizedFact.includes(normalizedWrong) && !normalizedWrong.includes(normalizedFact);
+		});
+		// Add the correct information if not already present
+		if (!isDuplicate(result, correction.right)) {
+			result.push(correction.right);
+		}
+	}
+	return result;
+}
+
 export function mergeExtraction(
 	existing: ParsedMemory,
 	extraction: ExtractionResult,
 ): ParsedMemory {
-	const facts = [...existing.facts];
+	// Apply corrections first — they take priority over existing facts
+	const corrections = extraction.corrections ?? [];
+	const facts = applyCorrections(existing.facts, corrections);
 	for (const f of extraction.facts) {
 		if (!isDuplicate(facts, f)) {
 			facts.push(f);

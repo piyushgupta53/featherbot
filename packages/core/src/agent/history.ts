@@ -1,12 +1,24 @@
 import type { LLMMessage } from "../provider/types.js";
+import {
+	type ConversationSummarizer,
+	createSummaryMessage,
+	extractSummaryText,
+	isSummaryMessage,
+} from "./summarizer.js";
 import type { ConversationHistory } from "./types.js";
 
 export class InMemoryHistory implements ConversationHistory {
 	private messages: LLMMessage[] = [];
 	private readonly maxMessages: number;
+	private summarizer?: ConversationSummarizer;
+	private summarizing = false;
 
 	constructor(options?: { maxMessages?: number }) {
 		this.maxMessages = options?.maxMessages ?? 50;
+	}
+
+	setSummarizer(summarizer: ConversationSummarizer): void {
+		this.summarizer = summarizer;
 	}
 
 	add(message: LLMMessage): void {
@@ -43,7 +55,40 @@ export class InMemoryHistory implements ConversationHistory {
 		}
 
 		const available = this.maxMessages - systemMessages.length;
-		const trimmed = nonSystemMessages.slice(-available);
-		this.messages = [...systemMessages, ...trimmed];
+
+		if (this.summarizer && !this.summarizing) {
+			// Batch eviction: remove oldest 40% for summarization
+			const evictCount = Math.floor(nonSystemMessages.length * 0.4);
+			const evicted = nonSystemMessages.slice(0, evictCount);
+			const kept = nonSystemMessages.slice(evictCount).slice(-available);
+			this.messages = [...systemMessages, ...kept];
+
+			if (evicted.length > 0) {
+				this.summarizing = true;
+				const existingSummaryMsg = systemMessages.find(isSummaryMessage);
+				const existingSummary = existingSummaryMsg
+					? extractSummaryText(existingSummaryMsg)
+					: undefined;
+
+				void this.summarizer
+					.summarize(evicted, existingSummary)
+					.then((summary) => {
+						if (summary) {
+							this.messages = this.messages.filter((m) => !isSummaryMessage(m));
+							this.messages.unshift(createSummaryMessage(summary));
+						}
+					})
+					.catch((err) => {
+						console.warn("[history] summarization failed:", err);
+					})
+					.finally(() => {
+						this.summarizing = false;
+					});
+			}
+		} else {
+			// Simple eviction: keep only the newest messages
+			const kept = nonSystemMessages.slice(-available);
+			this.messages = [...systemMessages, ...kept];
+		}
 	}
 }

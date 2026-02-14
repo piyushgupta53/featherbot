@@ -7,6 +7,7 @@ import {
 	MemoryExtractor,
 	RecallRecentTool,
 	checkStartupConfig,
+	containsCorrectionSignal,
 	createAgentLoop,
 	createMemoryStore,
 	createOutboundMessage,
@@ -176,7 +177,12 @@ export async function runRepl(): Promise<void> {
 	bus.subscribe("message:inbound", (event) => {
 		refreshUserTimezone();
 		maybeSetMemoryTimezone(userTimezone);
-		memoryExtractor?.scheduleExtraction(`${event.message.channel}:${event.message.chatId}`);
+		const sessionKey = `${event.message.channel}:${event.message.chatId}`;
+		if (containsCorrectionSignal(event.message.content)) {
+			memoryExtractor?.scheduleUrgentExtraction(sessionKey);
+		} else {
+			memoryExtractor?.scheduleExtraction(sessionKey);
+		}
 	});
 
 	if (config.heartbeat.enabled) {

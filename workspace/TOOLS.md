@@ -91,6 +91,25 @@ Example: `recall_recent({ days: 7 })`
 
 The `days` parameter is optional (default 7, max 30).
 
+## todo
+
+Manage a structured todo list for tracking tasks during conversations.
+
+**Actions:**
+- `add` — Add a new todo item. Requires: `text`.
+- `list` — List all todo items with their status.
+- `complete` — Mark a todo as done. Requires: `id`.
+- `delete` — Remove a todo item. Requires: `id`.
+
+**Examples:**
+
+Add a task: `todo({ action: "add", text: "Set up dev environment" })`
+List tasks: `todo({ action: "list" })`
+Complete a task: `todo({ action: "complete", id: 1 })`
+Delete a task: `todo({ action: "delete", id: 2 })`
+
+**When to use:** For multi-step tasks where progress tracking is useful (planning, setup guides, project checklists). Data is stored in `data/todos.json`.
+
 ## web_search
 
 Search the web using Brave Search API. Returns titles, URLs, and short descriptions. Fast and lightweight — use this for quick lookups where you just need links or brief answers.

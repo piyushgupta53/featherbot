@@ -7,6 +7,7 @@ import type { InboundMessage, SessionKey } from "../types.js";
 import { ContextBuilder } from "./context-builder.js";
 import type { ContextBuilderResult, SessionContext } from "./context-builder.js";
 import { InMemoryHistory } from "./history.js";
+import { ConversationSummarizer } from "./summarizer.js";
 import { buildToolMap } from "./tool-bridge.js";
 import type { AgentLoopOptions, AgentLoopResult, ConversationHistory, StepEvent } from "./types.js";
 
@@ -21,6 +22,7 @@ export class AgentLoop {
 	private readonly db?: Database.Database;
 	private readonly sessionStore?: SessionStore;
 	private readonly maxMessages: number;
+	private readonly summarizer?: ConversationSummarizer;
 
 	constructor(options: AgentLoopOptions) {
 		this.options = options;
@@ -38,6 +40,13 @@ export class AgentLoop {
 				agentName: "FeatherBot",
 				memoryStore: options.memoryStore,
 				skillsLoader: options.skillsLoader,
+			});
+		}
+		const summarizationEnabled = options.sessionConfig?.summarizationEnabled ?? true;
+		if (summarizationEnabled) {
+			this.summarizer = new ConversationSummarizer({
+				provider: options.provider,
+				model: options.config.model,
 			});
 		}
 	}
@@ -81,11 +90,19 @@ export class AgentLoop {
 		if (history === undefined) {
 			if (this.db !== undefined && this.sessionStore !== undefined) {
 				this.sessionStore.getOrCreate(sessionKey);
-				history = new SqliteHistory(this.db, sessionKey, {
+				const sqliteHistory = new SqliteHistory(this.db, sessionKey, {
 					maxMessages: this.maxMessages,
 				});
+				if (this.summarizer) {
+					sqliteHistory.setSummarizer(this.summarizer);
+				}
+				history = sqliteHistory;
 			} else {
-				history = new InMemoryHistory({ maxMessages: this.maxMessages });
+				const memHistory = new InMemoryHistory({ maxMessages: this.maxMessages });
+				if (this.summarizer) {
+					memHistory.setSummarizer(this.summarizer);
+				}
+				history = memHistory;
 			}
 			this.sessions.set(sessionKey, history);
 		}
@@ -120,9 +137,11 @@ export class AgentLoop {
 
 		const toolMap = buildToolMap(toolRegistry);
 
+		const historyMessages = sanitizeHistory(history.getMessages());
+
 		const messages: LLMMessage[] = [
 			{ role: "system", content: ctx.systemPrompt },
-			...history.getMessages(),
+			...historyMessages,
 			{ role: "user", content: userContent },
 		];
 
@@ -177,4 +196,64 @@ export class AgentLoop {
 			// Callback errors are silently caught — they must not crash the loop
 		}
 	}
+}
+
+/**
+ * Sanitize conversation history before sending to the LLM.
+ *
+ * Handles two edge cases:
+ * 1. Orphaned tool-result messages (role: "tool" with toolCallId) that appear
+ *    without a preceding assistant tool-call — these confuse the LLM.
+ * 2. The last message being a dangling assistant message with a toolCallId
+ *    but no following tool result (process crash mid-execution).
+ *
+ * In the current architecture, tool calls/results are handled within a single
+ * provider.generate() call and only user/assistant messages are persisted.
+ * This function is a defensive guard against DB corruption, future changes,
+ * or external session modifications.
+ */
+export function sanitizeHistory(messages: LLMMessage[]): LLMMessage[] {
+	if (messages.length === 0) return messages;
+
+	const result: LLMMessage[] = [];
+	const seenToolCallIds = new Set<string>();
+
+	// First pass: collect all toolCallIds from messages that might be "callers"
+	// (assistant messages with toolCallId indicate a tool was invoked)
+	for (const msg of messages) {
+		if (msg.role === "assistant" && msg.toolCallId) {
+			seenToolCallIds.add(msg.toolCallId);
+		}
+	}
+
+	let needsInjection = false;
+	let lastAssistantToolCallId: string | undefined;
+
+	for (const msg of messages) {
+		// Skip orphaned tool results that don't match any known tool call
+		if (msg.role === "tool" && msg.toolCallId && !seenToolCallIds.has(msg.toolCallId)) {
+			continue;
+		}
+
+		result.push(msg);
+
+		if (msg.role === "assistant" && msg.toolCallId) {
+			lastAssistantToolCallId = msg.toolCallId;
+			needsInjection = true;
+		} else if (msg.role === "tool" && msg.toolCallId === lastAssistantToolCallId) {
+			needsInjection = false;
+			lastAssistantToolCallId = undefined;
+		}
+	}
+
+	// If the last assistant message had a tool call with no result, inject one
+	if (needsInjection && lastAssistantToolCallId) {
+		result.push({
+			role: "tool",
+			content: "[Tool call was interrupted — process restarted before completion]",
+			toolCallId: lastAssistantToolCallId,
+		});
+	}
+
+	return result;
 }

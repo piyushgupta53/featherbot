@@ -18,11 +18,16 @@
 - **Skills** — Markdown-driven plugins with two-tier loading (always-on + lazy-loaded)
 - **Sub-agents** — Spawn background tasks with isolated tool sets and timeouts
 - **Memory** — Persistent file-based memory with deterministic structured extraction, programmatic daily note rollup, and auto-compaction
-- **Session management** — SQLite-backed conversation history with message trimming
+- **Session management** — SQLite-backed conversation history with automatic summarization on trim
+- **Conversation summarization** — Rolling LLM-generated summaries preserve context when history is trimmed
 - **Cron & heartbeat** — Scheduled tasks, one-time reminders, and periodic self-reflection
 - **Voice transcription** — Groq or OpenAI Whisper for voice messages in Telegram/WhatsApp
 - **Message batching** — Per-session debounce and serialization to prevent race conditions and reduce LLM costs
 - **Context builder** — 5-layer system prompt (identity, bootstrap files, memory, skills, session)
+- **Prompt caching** — Anthropic cache control on system messages for reduced token costs
+- **Active learning** — Correction detection triggers urgent memory extraction (60s vs 5min)
+- **Large result eviction** — Oversized tool results saved to scratch with head+tail preview
+- **Todo tracking** — Structured task list with add/complete/delete for multi-step workflows
 - **Docker support** — Multi-stage build, docker-compose, headless mode
 
 ## Prerequisites
@@ -118,6 +123,7 @@ Direct Baileys integration (no external bridge). Supports all message types, aut
 | `cron` | Manage scheduled tasks (add/list/remove/enable/disable) |
 | `recall_recent` | Retrieve past daily notes (last N days) on demand |
 | `spawn` | Spawn sub-agents for background tasks |
+| `todo` | Structured task tracking with add/list/complete/delete actions |
 
 All tools return strings and never throw errors to the LLM.
 
@@ -163,7 +169,9 @@ File-based storage in `workspace/memory/` with a two-layer persistence strategy:
 
 **Inline writes (real-time)** — The agent writes to MEMORY.md via `edit_file` during conversation when the user shares personal info or says "remember this."
 
-**Structured extraction (post-idle)** — After 5 minutes of idle (configurable), the LLM returns structured JSON via `generateStructured()` with automatic text-mode fallback for models that lack native JSON mode — facts, patterns, pending items, and priority-tagged observations. Code then handles persistence deterministically: parse MEMORY.md, merge with dedup, render, write. No tool calls, no prompt-following — just data in, file out.
+**Structured extraction (post-idle)** — After 5 minutes of idle (configurable), the LLM returns structured JSON via `generateStructured()` with automatic text-mode fallback for models that lack native JSON mode — facts, patterns, pending items, corrections, and priority-tagged observations. Code then handles persistence deterministically: parse MEMORY.md, merge with dedup, render, write. No tool calls, no prompt-following — just data in, file out.
+
+**Active learning from corrections** — When the user corrects the agent ("No, I prefer Python not JS"), a correction signal is detected and triggers urgent extraction (60s instead of 5min). Corrections have the highest extraction priority, and contradicted facts are replaced rather than appended.
 
 **Max-age safety net** — If the user chats non-stop for 30+ minutes without a gap, extraction fires immediately instead of waiting for idle.
 
@@ -266,7 +274,7 @@ workspace/
 ```bash
 pnpm install          # Install dependencies
 pnpm build            # Build all packages
-pnpm test             # Run all tests (807 tests)
+pnpm test             # Run all tests (846 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```

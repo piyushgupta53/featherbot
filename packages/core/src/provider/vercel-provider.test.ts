@@ -244,6 +244,88 @@ describe("VercelLLMProvider.generate", () => {
 	});
 });
 
+describe("VercelLLMProvider prompt caching", () => {
+	function lastGenerateCall() {
+		const calls = mockGenerateText.mock.calls;
+		return calls[calls.length - 1]?.[0];
+	}
+
+	it("adds Anthropic cache control to system messages for Anthropic models", async () => {
+		mockGenerateText.mockResolvedValueOnce({
+			text: "ok",
+			toolCalls: [],
+			toolResults: [],
+			steps: [{ toolCalls: [], toolResults: [] }],
+			usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			totalUsage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			finishReason: "stop",
+		});
+
+		const provider = createProvider();
+		await provider.generate({
+			messages: [
+				{ role: "system", content: "You are a helpful assistant." },
+				{ role: "user", content: "Hi" },
+			],
+		});
+
+		const callArgs = lastGenerateCall();
+		const systemMsg = callArgs?.messages?.[0];
+		expect(systemMsg?.providerOptions?.anthropic?.cacheControl).toEqual({ type: "ephemeral" });
+	});
+
+	it("does not add cache control for non-Anthropic models", async () => {
+		mockGenerateText.mockResolvedValueOnce({
+			text: "ok",
+			toolCalls: [],
+			toolResults: [],
+			steps: [{ toolCalls: [], toolResults: [] }],
+			usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			totalUsage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			finishReason: "stop",
+		});
+
+		const provider = new VercelLLMProvider({
+			providerConfig,
+			defaultModel: "openai/gpt-4o",
+		});
+		await provider.generate({
+			messages: [
+				{ role: "system", content: "You are a helpful assistant." },
+				{ role: "user", content: "Hi" },
+			],
+		});
+
+		const callArgs = lastGenerateCall();
+		const systemMsg = callArgs?.messages?.[0];
+		expect(systemMsg?.providerOptions).toBeUndefined();
+	});
+
+	it("does not add cache control to non-system messages", async () => {
+		mockGenerateText.mockResolvedValueOnce({
+			text: "ok",
+			toolCalls: [],
+			toolResults: [],
+			steps: [{ toolCalls: [], toolResults: [] }],
+			usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			totalUsage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+			finishReason: "stop",
+		});
+
+		const provider = createProvider();
+		await provider.generate({
+			messages: [
+				{ role: "system", content: "System prompt" },
+				{ role: "user", content: "Hi" },
+			],
+		});
+
+		const callArgs = lastGenerateCall();
+		const userMsg = callArgs?.messages?.[1];
+		expect(userMsg?.providerOptions).toBeUndefined();
+	});
+});
+
 describe("VercelLLMProvider.stream", () => {
 	it("streams text deltas via textStream", async () => {
 		mockStreamText.mockReturnValueOnce(mockStreamResult({ textChunks: ["Hello", ", ", "world!"] }));

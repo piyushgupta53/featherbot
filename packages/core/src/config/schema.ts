@@ -77,11 +77,13 @@ export const ToolConfigSchema = z.object({
 		.default({}),
 	exec: ExecToolConfigSchema.default({}),
 	restrictToWorkspace: z.boolean().default(false),
+	resultEvictionThreshold: z.number().int().positive().default(20000),
 });
 
 export const SessionConfigSchema = z.object({
 	dbPath: z.string().default("~/.featherbot/sessions.db"),
 	maxMessages: z.number().int().positive().default(50),
+	summarizationEnabled: z.boolean().default(true),
 });
 
 export const CronConfigSchema = z.object({

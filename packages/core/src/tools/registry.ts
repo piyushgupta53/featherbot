@@ -1,4 +1,6 @@
 import type { z } from "zod";
+import type { EvictLargeResultOptions } from "./result-evictor.js";
+import { evictLargeResult } from "./result-evictor.js";
 import type { Tool } from "./types.js";
 
 export interface ToolRegistryDefinition {
@@ -10,6 +12,11 @@ export interface ToolRegistryDefinition {
 
 export class ToolRegistry {
 	private tools = new Map<string, Tool>();
+	private evictionOptions?: EvictLargeResultOptions;
+
+	setEvictionOptions(options: EvictLargeResultOptions): void {
+		this.evictionOptions = options;
+	}
 
 	register(tool: Tool): void {
 		if (this.tools.has(tool.name)) {
@@ -57,7 +64,8 @@ export class ToolRegistry {
 				return `Error: Invalid parameters for '${name}': ${issues}\nExpected schema:\n${shape}`;
 			}
 
-			return await tool.execute(parsed.data);
+			const output = await tool.execute(parsed.data);
+			return this.evictionOptions ? evictLargeResult(output, this.evictionOptions) : output;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			return `Error executing '${name}': ${message}`;

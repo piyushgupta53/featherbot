@@ -17,6 +17,7 @@ function createMockProvider() {
 				pending: [],
 				resolvedPending: [],
 				observations: [],
+				corrections: [],
 			} satisfies ExtractionResult,
 			usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
 			finishReason: "stop",
@@ -190,6 +191,7 @@ describe("MemoryExtractor", () => {
 				pending: [],
 				resolvedPending: [],
 				observations: [],
+				corrections: [],
 			} satisfies ExtractionResult,
 			usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
 			finishReason: "stop",
@@ -215,6 +217,7 @@ describe("MemoryExtractor", () => {
 				pending: [],
 				resolvedPending: [],
 				observations: [{ text: "User decided on TypeScript", priority: "red" }],
+				corrections: [],
 			} satisfies ExtractionResult,
 			usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
 			finishReason: "stop",
@@ -293,6 +296,7 @@ describe("MemoryExtractor", () => {
 					patterns: [],
 					pending: [],
 					resolvedPending: [],
+					corrections: [],
 					observations: [],
 				} satisfies ExtractionResult,
 				usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -382,6 +386,7 @@ describe("buildExtractionPrompt", () => {
 		expect(prompt).toContain("patterns");
 		expect(prompt).toContain("pending");
 		expect(prompt).toContain("resolvedPending");
+		expect(prompt).toContain("corrections");
 		expect(prompt).toContain("observations");
 	});
 });

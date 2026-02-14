@@ -107,6 +107,7 @@ describe("mergeExtraction", () => {
 			patterns: [],
 			pending: [],
 			resolvedPending: [],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(emptyMemory, extraction);
@@ -121,6 +122,7 @@ describe("mergeExtraction", () => {
 			patterns: [],
 			pending: [],
 			resolvedPending: [],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(existing, extraction);
@@ -139,6 +141,7 @@ describe("mergeExtraction", () => {
 			patterns: [],
 			pending: [],
 			resolvedPending: [],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(existing, extraction);
@@ -153,6 +156,7 @@ describe("mergeExtraction", () => {
 			patterns: ["Prefers TypeScript"],
 			pending: ["Domain renewal"],
 			resolvedPending: [],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(existing, extraction);
@@ -173,6 +177,7 @@ describe("mergeExtraction", () => {
 			patterns: [],
 			pending: [],
 			resolvedPending: ["domain renewal is done"],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(existing, extraction);
@@ -191,9 +196,29 @@ describe("mergeExtraction", () => {
 			patterns: [],
 			pending: ["New pending task"],
 			resolvedPending: ["old pending task"],
+			corrections: [],
 			observations: [],
 		};
 		const result = mergeExtraction(existing, extraction);
 		expect(result.pending).toEqual(["New pending task"]);
+	});
+
+	it("applies corrections by replacing contradicted facts", () => {
+		const existing = {
+			facts: ["User prefers JavaScript", "Lives in San Francisco"],
+			patterns: [],
+			pending: [],
+		};
+		const extraction: ExtractionResult = {
+			skip: false,
+			facts: [],
+			patterns: [],
+			pending: [],
+			resolvedPending: [],
+			corrections: [{ wrong: "prefers JavaScript", right: "User prefers Python" }],
+			observations: [],
+		};
+		const result = mergeExtraction(existing, extraction);
+		expect(result.facts).toEqual(["Lives in San Francisco", "User prefers Python"]);
 	});
 });

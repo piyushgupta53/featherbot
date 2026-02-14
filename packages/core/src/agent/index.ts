@@ -41,7 +41,14 @@ export type {
 	SessionContext,
 } from "./context-builder.js";
 export { InMemoryHistory } from "./history.js";
-export { AgentLoop } from "./loop.js";
+export { AgentLoop, sanitizeHistory } from "./loop.js";
+export {
+	ConversationSummarizer,
+	isSummaryMessage,
+	createSummaryMessage,
+	extractSummaryText,
+} from "./summarizer.js";
+export type { ConversationSummarizerOptions } from "./summarizer.js";
 export { buildToolMap } from "./tool-bridge.js";
 export type {
 	AgentLoopOptions,

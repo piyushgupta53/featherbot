@@ -1,7 +1,7 @@
 import { generateObject, generateText, stepCountIs, streamText } from "ai";
 import type { ProviderConfig } from "../config/schema.js";
 import type { LLMToolCall, LLMUsage, ToolDefinition, ToolResult } from "../types.js";
-import { resolveModel } from "./model-resolver.js";
+import { getProviderName, resolveModel } from "./model-resolver.js";
 import { withRetry } from "./retry.js";
 import type {
 	GenerateOptions,
@@ -62,7 +62,9 @@ function buildTools(tools: Record<string, ToolDefinition>) {
 
 const EMPTY_USAGE: LLMUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
-function mapMessages(messages: LLMMessage[]) {
+function mapMessages(messages: LLMMessage[], modelString?: string) {
+	const isAnthropic = modelString ? getProviderName(modelString) === "anthropic" : false;
+
 	return messages.map((msg) => {
 		if (msg.role === "tool" && msg.toolCallId) {
 			return {
@@ -75,6 +77,15 @@ function mapMessages(messages: LLMMessage[]) {
 						output: { type: "text" as const, value: msg.content },
 					},
 				],
+			};
+		}
+		if (msg.role === "system" && isAnthropic) {
+			return {
+				role: "system" as const,
+				content: msg.content,
+				providerOptions: {
+					anthropic: { cacheControl: { type: "ephemeral" } },
+				},
 			};
 		}
 		return { role: msg.role as "system" | "user" | "assistant", content: msg.content };
@@ -178,7 +189,7 @@ export class VercelLLMProvider implements LLMProvider {
 			// biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is complex, we use our own ToolDefinition interface
 			const aiTools = options.tools ? (buildTools(options.tools) as any) : undefined;
 
-			const messages = mapMessages(options.messages);
+			const messages = mapMessages(options.messages, modelString);
 
 			const result = await withRetry(() =>
 				generateText({
@@ -237,7 +248,7 @@ export class VercelLLMProvider implements LLMProvider {
 			// biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is complex, we use our own ToolDefinition interface
 			const aiTools = options.tools ? (buildTools(options.tools) as any) : undefined;
 
-			const messages = mapMessages(options.messages);
+			const messages = mapMessages(options.messages, modelString);
 
 			const aiResult = await withRetry(() =>
 				streamText({
@@ -306,7 +317,7 @@ export class VercelLLMProvider implements LLMProvider {
 	): Promise<GenerateStructuredResult<T>> {
 		const modelString = options.model ?? this.defaultModel;
 		const model = resolveModel(modelString, this.providerConfig);
-		const messages = mapMessages(options.messages);
+		const messages = mapMessages(options.messages, modelString);
 
 		const result = await withRetry(() =>
 			generateObject({

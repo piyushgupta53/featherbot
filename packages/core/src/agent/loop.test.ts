@@ -7,7 +7,7 @@ import type { AgentConfig } from "../config/schema.js";
 import type { GenerateOptions, GenerateResult, LLMProvider } from "../provider/types.js";
 import { ToolRegistry } from "../tools/registry.js";
 import type { InboundMessage } from "../types.js";
-import { AgentLoop } from "./loop.js";
+import { AgentLoop, sanitizeHistory } from "./loop.js";
 import type { StepCallback, StepEvent } from "./types.js";
 
 const EMPTY_USAGE = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
@@ -800,7 +800,7 @@ describe("AgentLoop", () => {
 				provider: makeMockProvider(generateSpy),
 				toolRegistry: new ToolRegistry(),
 				config: makeConfig(),
-				sessionConfig: { dbPath, maxMessages: 50 },
+				sessionConfig: { dbPath, maxMessages: 50, summarizationEnabled: false },
 			});
 
 			await loop.processMessage(makeInbound("hello", { channel: "tg", chatId: "42" }));
@@ -825,7 +825,7 @@ describe("AgentLoop", () => {
 				provider: makeMockProvider(),
 				toolRegistry: new ToolRegistry(),
 				config: makeConfig(),
-				sessionConfig: { dbPath, maxMessages: 50 },
+				sessionConfig: { dbPath, maxMessages: 50, summarizationEnabled: false },
 			});
 
 			await loop.processMessage(makeInbound("hi", { channel: "telegram", chatId: "99" }));
@@ -867,7 +867,7 @@ describe("AgentLoop", () => {
 				provider: makeMockProvider(generateSpy),
 				toolRegistry: new ToolRegistry(),
 				config: makeConfig(),
-				sessionConfig: { dbPath: "", maxMessages: 50 },
+				sessionConfig: { dbPath: "", maxMessages: 50, summarizationEnabled: false },
 			});
 
 			await loop.processMessage(makeInbound("first"));
@@ -890,7 +890,7 @@ describe("AgentLoop", () => {
 				provider: makeMockProvider(generateSpy),
 				toolRegistry: new ToolRegistry(),
 				config: makeConfig(),
-				sessionConfig: { dbPath, maxMessages: 50 },
+				sessionConfig: { dbPath, maxMessages: 50, summarizationEnabled: false },
 			});
 
 			await loop.processMessage(makeInbound("first", { channel: "tg", chatId: "1" }));
@@ -904,5 +904,81 @@ describe("AgentLoop", () => {
 			expect(messages[1]).toEqual({ role: "user", content: "first" });
 			expect(messages[2]).toEqual({ role: "assistant", content: "R1" });
 		});
+	});
+});
+
+describe("sanitizeHistory", () => {
+	it("returns empty array unchanged", () => {
+		expect(sanitizeHistory([])).toEqual([]);
+	});
+
+	it("returns normal user/assistant messages unchanged", () => {
+		const messages = [
+			{ role: "user" as const, content: "hello" },
+			{ role: "assistant" as const, content: "hi" },
+		];
+		expect(sanitizeHistory(messages)).toEqual(messages);
+	});
+
+	it("removes orphaned tool result messages", () => {
+		const messages = [
+			{ role: "user" as const, content: "hello" },
+			{ role: "tool" as const, content: "some result", toolCallId: "orphan-123" },
+			{ role: "assistant" as const, content: "hi" },
+		];
+		const result = sanitizeHistory(messages);
+		expect(result).toEqual([
+			{ role: "user", content: "hello" },
+			{ role: "assistant", content: "hi" },
+		]);
+	});
+
+	it("keeps tool result that matches an assistant tool call", () => {
+		const messages = [
+			{ role: "user" as const, content: "hello" },
+			{ role: "assistant" as const, content: "calling tool", toolCallId: "tc-1" },
+			{ role: "tool" as const, content: "tool output", toolCallId: "tc-1" },
+			{ role: "assistant" as const, content: "done" },
+		];
+		const result = sanitizeHistory(messages);
+		expect(result).toEqual(messages);
+	});
+
+	it("injects synthetic result for dangling assistant tool call", () => {
+		const messages = [
+			{ role: "user" as const, content: "hello" },
+			{ role: "assistant" as const, content: "calling tool", toolCallId: "tc-1" },
+		];
+		const result = sanitizeHistory(messages);
+		expect(result.length).toBe(3);
+		expect(result[2]).toEqual({
+			role: "tool",
+			content: "[Tool call was interrupted — process restarted before completion]",
+			toolCallId: "tc-1",
+		});
+	});
+
+	it("does not inject when last assistant has no toolCallId", () => {
+		const messages = [
+			{ role: "user" as const, content: "hello" },
+			{ role: "assistant" as const, content: "just text" },
+		];
+		const result = sanitizeHistory(messages);
+		expect(result).toEqual(messages);
+	});
+
+	it("handles mixed scenario: orphan + dangling", () => {
+		const messages = [
+			{ role: "tool" as const, content: "orphan", toolCallId: "orphan-1" },
+			{ role: "user" as const, content: "hello" },
+			{ role: "assistant" as const, content: "will call", toolCallId: "tc-2" },
+		];
+		const result = sanitizeHistory(messages);
+		// Orphan removed, dangling gets injection
+		expect(result.length).toBe(3);
+		expect(result[0]).toEqual({ role: "user", content: "hello" });
+		expect(result[1]).toEqual({ role: "assistant", content: "will call", toolCallId: "tc-2" });
+		expect(result[2]?.role).toBe("tool");
+		expect(result[2]?.toolCallId).toBe("tc-2");
 	});
 });

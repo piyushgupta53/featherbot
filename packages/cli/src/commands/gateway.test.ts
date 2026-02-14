@@ -85,8 +85,10 @@ vi.mock("@featherbot/core", () => ({
 	SubagentStatusTool: vi.fn(),
 	MemoryExtractor: vi.fn(() => ({
 		scheduleExtraction: vi.fn(),
+		scheduleUrgentExtraction: vi.fn(),
 		dispose: vi.fn(),
 	})),
+	containsCorrectionSignal: vi.fn(() => false),
 	RecallRecentTool: vi.fn(),
 	Transcriber: vi.fn(),
 	parseTimezoneFromUserMd: vi.fn(() => null),
@@ -141,8 +143,9 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 			},
 			exec: { timeout: 60 },
 			restrictToWorkspace: false,
+			resultEvictionThreshold: 20000,
 		},
-		session: { dbPath: "", maxMessages: 50 },
+		session: { dbPath: "", maxMessages: 50, summarizationEnabled: true },
 		cron: { enabled: false, storePath: "" },
 		heartbeat: {
 			enabled: false,

@@ -31,13 +31,15 @@ Extract the following from the conversation:
 2. **patterns**: Recurring behaviors or preferences observed. Only include NEW patterns.
 3. **pending**: Follow-ups, reminders, things to circle back on. Only include NEW pending items.
 4. **resolvedPending**: Any pending items from MEMORY.md that have been completed or are no longer relevant.
-5. **observations**: Notable observations from this conversation for the daily note, each with a priority:
-   - "red": Important — decisions made, action items, explicit requests to remember, strong preferences
+5. **corrections**: HIGHEST PRIORITY — If the user corrected the agent or contradicted something in MEMORY.md (e.g., "No, I prefer Python not JS", "Actually my name is...", "That's wrong, I..."), extract each correction as { wrong: "the incorrect belief", right: "the correct information" }. Corrections MUST override existing facts.
+6. **observations**: Notable observations from this conversation for the daily note, each with a priority:
+   - "red": Important — decisions made, action items, explicit requests to remember, strong preferences, CORRECTIONS
    - "yellow": Moderate — topics discussed, tasks worked on, notable context
    - "green": Minor — informational details, passing mentions
 
 Set "skip" to true ONLY if the conversation is truly empty (just greetings with no substance).
-Be concise — compress, don't transcribe.`;
+Be concise — compress, don't transcribe.
+IMPORTANT: Corrections and user feedback take absolute priority. If the user says "no", "actually", "that's wrong", "I prefer X not Y", or contradicts a stored fact, you MUST capture it as a correction.`;
 }
 
 function buildCompactionPrompt(currentMemory: string): string {
@@ -56,6 +58,27 @@ Consolidate the memory:
 5. Keep the same categories: facts, patterns, pending
 
 Return the compacted version. Aim to reduce size by ~30% while preserving all important information.`;
+}
+
+const CORRECTION_PATTERNS = [
+	/\bno[,.]?\s+(i|my|it'?s|that'?s|actually)\b/i,
+	/\bactually[,.]?\s+(i|my|it'?s|that'?s)\b/i,
+	/\bthat'?s\s+(wrong|incorrect|not right|not true)\b/i,
+	/\bi\s+prefer\s+\w+\s+not\b/i,
+	/\bnot\s+\w+[,.]?\s+(i|it'?s)\s+(prefer|like|use|want)\b/i,
+	/\bstop\s+(calling|saying|using)\b/i,
+	/\bdon'?t\s+(call|say)\s+me\b/i,
+	/\bmy\s+name\s+is\s+(actually|really)\b/i,
+	/\bcorrect(ion)?:/i,
+	/\bremember\s+that\s+i\b/i,
+];
+
+/**
+ * Detect whether a message contains correction signals that should
+ * trigger urgent memory extraction.
+ */
+export function containsCorrectionSignal(text: string): boolean {
+	return CORRECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 export class MemoryExtractor {
@@ -112,6 +135,28 @@ export class MemoryExtractor {
 			this.timers.delete(sessionKey);
 			void this.extract(sessionKey);
 		}
+	}
+
+	/**
+	 * Schedule an urgent extraction with a short delay (60s) when correction
+	 * signals are detected in user messages.
+	 */
+	scheduleUrgentExtraction(sessionKey: string): void {
+		if (!this.enabled) return;
+
+		const existing = this.timers.get(sessionKey);
+		if (existing !== undefined) {
+			clearTimeout(existing);
+		}
+
+		const urgentMs = 60_000;
+		const timer = setTimeout(() => {
+			this.timers.delete(sessionKey);
+			void this.extract(sessionKey);
+		}, urgentMs);
+
+		this.timers.set(sessionKey, timer);
+		console.log(`[memory] urgent extraction scheduled for ${sessionKey} (60s)`);
 	}
 
 	async dispose(): Promise<void> {

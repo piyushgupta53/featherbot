@@ -21,6 +21,7 @@ import {
 	Transcriber,
 	buildSubagentResultPrompt,
 	checkStartupConfig,
+	containsCorrectionSignal,
 	createAgentLoop,
 	createMemoryStore,
 	createOutboundMessage,
@@ -345,7 +346,12 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		if (cronTool) {
 			cronTool.setContext(event.message.channel, event.message.chatId, userTimezone);
 		}
-		memoryExtractor.scheduleExtraction(`${event.message.channel}:${event.message.chatId}`);
+		const sessionKey = `${event.message.channel}:${event.message.chatId}`;
+		if (containsCorrectionSignal(event.message.content)) {
+			memoryExtractor.scheduleUrgentExtraction(sessionKey);
+		} else {
+			memoryExtractor.scheduleExtraction(sessionKey);
+		}
 	});
 
 	return new Gateway({

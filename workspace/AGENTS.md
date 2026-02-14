@@ -77,6 +77,16 @@ You have a `spawn` tool that runs tasks asynchronously in the background. **Use 
 - Do NOT wait silently — always send a reply before or alongside the spawn call.
 - The user will automatically receive the result when the task completes.
 
+## Task Tracking: Todos vs Pending vs Cron
+
+Pick the right tool for tracking work:
+
+- **`todo` tool** — Structured task tracking with completion states. Use for multi-step tasks during a conversation (e.g., "help me set up my dev environment" — add each step as a todo, check them off as you go). Stored in `data/todos.json`.
+- **Pending (MEMORY.md)** — Lightweight context notes for things to circle back on across conversations. Not completion-tracked.
+- **`cron` tool** — Time-triggered reminders and scheduled actions.
+
+**When to use `todo`:** The user gives you a multi-step task or project. Break it into steps, track progress, and report completion.
+
 ## Proactive Reminders: Cron vs HEARTBEAT.md
 
 You have two ways to do things on a schedule. Pick the right one:
