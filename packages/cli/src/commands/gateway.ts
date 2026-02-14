@@ -121,39 +121,6 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 
 	const originContext: SpawnToolOriginContext = { channel: "", chatId: "" };
 	const provider = createProvider(config);
-	const subagentManager = new SubagentManager(provider, config, async (state) => {
-		let content: string;
-		try {
-			const prompt = buildSubagentResultPrompt(state);
-			const result = await agentLoop.processDirect(prompt, {
-				sessionKey: `subagent-result:${state.id}`,
-				skipHistory: true,
-				maxSteps: 1,
-			});
-			content = result.text || `Background task ${state.status}: ${state.task}`;
-		} catch {
-			content =
-				state.status === "completed"
-					? `Background task completed:\nTask: ${state.task}\nResult: ${state.result}`
-					: `Background task failed:\nTask: ${state.task}\nError: ${state.error}`;
-		}
-		await bus.publish({
-			type: "message:outbound",
-			message: createOutboundMessage({
-				channel: state.originChannel,
-				chatId: state.originChatId,
-				content,
-				replyTo: null,
-				media: [],
-				metadata: {},
-				inReplyToMessageId: null,
-			}),
-			timestamp: new Date(),
-		});
-	});
-
-	toolRegistry.register(new SpawnTool(subagentManager, originContext));
-	toolRegistry.register(new SubagentStatusTool(subagentManager));
 
 	const workspace = resolveHome(config.agents.defaults.workspace);
 	const wsDirs = resolveWorkspaceDirs(
@@ -209,6 +176,65 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			}
 		},
 	});
+
+	const subagentManager = new SubagentManager(
+		provider,
+		config,
+		async (state) => {
+			let content: string;
+			try {
+				const prompt = buildSubagentResultPrompt(state);
+				const result = await agentLoop.processDirect(prompt, {
+					sessionKey: `subagent-result:${state.id}`,
+					skipHistory: true,
+					maxSteps: 1,
+				});
+				content = result.text || `Background task ${state.status}: ${state.task}`;
+			} catch {
+				content =
+					state.status === "completed"
+						? `Background task completed:\nTask: ${state.task}\nResult: ${state.result}`
+						: `Background task ${state.status}:\nTask: ${state.task}\nError: ${state.error}`;
+			}
+
+			// Inject a brief record into the parent session history
+			const parentSessionKey = `${state.originChannel}:${state.originChatId}`;
+			const statusLabel = String(state.status);
+			const brief = state.result
+				? `[Background task ${statusLabel}: "${state.task}" — ${state.result.slice(0, 200)}]`
+				: `[Background task ${statusLabel}: "${state.task}" — ${state.error ?? "done"}]`;
+			agentLoop.injectMessage(parentSessionKey as `${string}:${string}`, {
+				role: "assistant",
+				content: brief,
+			});
+
+			await bus.publish({
+				type: "message:outbound",
+				message: createOutboundMessage({
+					channel: state.originChannel,
+					chatId: state.originChatId,
+					content,
+					replyTo: null,
+					media: [],
+					metadata: {},
+					inReplyToMessageId: null,
+				}),
+				timestamp: new Date(),
+			});
+		},
+		memoryStore,
+	);
+
+	toolRegistry.register(
+		new SpawnTool(subagentManager, originContext, {
+			getParentHistory: () => {
+				const sessionKey = `${originContext.channel}:${originContext.chatId}`;
+				return agentLoop.getHistory(sessionKey as `${string}:${string}`);
+			},
+			getMemoryContext: () => memoryStore.getMemoryContext(),
+		}),
+	);
+	toolRegistry.register(new SubagentStatusTool(subagentManager));
 
 	const memoryExtractor = new MemoryExtractor({
 		provider,

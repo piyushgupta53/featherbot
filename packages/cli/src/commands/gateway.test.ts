@@ -1,3 +1,4 @@
+import { BUILTIN_SPECS } from "@featherbot/core";
 import type { SubagentState } from "@featherbot/core";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,11 +40,34 @@ vi.mock("@featherbot/core", () => ({
 		getActiveChannels: vi.fn().mockReturnValue([]),
 		opts,
 	})),
+	BUILTIN_SPECS: {
+		general: {
+			name: "general",
+			systemPrompt: "You are a FeatherBot sub-agent.",
+			toolPreset: "full",
+		},
+		researcher: {
+			name: "researcher",
+			systemPrompt: "You are a FeatherBot research sub-agent.",
+			toolPreset: "read-only",
+		},
+		coder: {
+			name: "coder",
+			systemPrompt: "You are a FeatherBot coding sub-agent.",
+			toolPreset: "files",
+		},
+		analyst: {
+			name: "analyst",
+			systemPrompt: "You are a FeatherBot analysis sub-agent.",
+			toolPreset: "full",
+		},
+	},
 	checkStartupConfig: vi.fn(() => ({ ready: true, errors: [], warnings: [] })),
 	createAgentLoop: vi.fn(() => ({
 		processDirect: mockProcessDirect,
 		processMessage: vi.fn(),
 		getHistory: vi.fn().mockReturnValue([]),
+		injectMessage: vi.fn(),
 	})),
 	createMemoryStore: vi.fn(() => ({
 		getMemoryContext: vi.fn().mockResolvedValue(""),
@@ -77,7 +101,12 @@ vi.mock("@featherbot/core", () => ({
 	CronTool: vi.fn(),
 	SpawnTool: vi.fn(),
 	SubagentManager: vi.fn(
-		(_provider: unknown, _config: unknown, onComplete: (state: SubagentState) => Promise<void>) => {
+		(
+			_provider: unknown,
+			_config: unknown,
+			onComplete: (state: SubagentState) => Promise<void>,
+			_memoryStore?: unknown,
+		) => {
 			capturedOnComplete = onComplete;
 			return {};
 		},
@@ -222,6 +251,8 @@ describe("subagent result summarization", () => {
 			completedAt: new Date(),
 			originChannel: "telegram",
 			originChatId: "user-456",
+			spec: BUILTIN_SPECS.general,
+			abortController: new AbortController(),
 		};
 
 		await capturedOnComplete?.(state);
@@ -258,6 +289,8 @@ describe("subagent result summarization", () => {
 			completedAt: new Date(),
 			originChannel: "whatsapp",
 			originChatId: "user-321",
+			spec: BUILTIN_SPECS.general,
+			abortController: new AbortController(),
 		};
 
 		await capturedOnComplete?.(state);
@@ -295,6 +328,8 @@ describe("subagent result summarization", () => {
 			completedAt: new Date(),
 			originChannel: "terminal",
 			originChatId: "cli",
+			spec: BUILTIN_SPECS.general,
+			abortController: new AbortController(),
 		};
 
 		await capturedOnComplete?.(state);
@@ -326,6 +361,8 @@ describe("subagent result summarization", () => {
 			completedAt: new Date(),
 			originChannel: "telegram",
 			originChatId: "user-999",
+			spec: BUILTIN_SPECS.general,
+			abortController: new AbortController(),
 		};
 
 		await capturedOnComplete?.(state);

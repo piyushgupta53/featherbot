@@ -69,19 +69,44 @@ Remove a job: `cron({ action: "remove", jobId: "the-job-id" })`
 
 ## spawn
 
-Run a task in the background using a sub-agent. The sub-agent has access to exec, read_file, write_file, edit_file, and list_dir. Results are delivered back to the user's channel when complete.
+Run a task in the background using a specialized sub-agent. Returns immediately — the user gets a response right away while the sub-agent works. Results are delivered back to the user's channel when complete.
 
-Example: `spawn({ task: "Search for the latest Node.js LTS version and summarize what's new" })`
+**Parameters:**
+- `task` (required) — The task description for the sub-agent.
+- `type` (optional) — Sub-agent specialization. One of:
+  - `general` (default) — Full tool access. Good for tasks that need both research and file work.
+  - `researcher` — Read-only + web tools. Best for web lookups, research, and information gathering. Cannot modify files.
+  - `coder` — File + exec tools only. Best for writing code, editing files, running scripts. No web access.
+  - `analyst` — Full tool access with data-focused prompt. Best for analyzing data, files, or comparing information.
 
-Returns immediately — the user gets a response right away while the sub-agent works.
+**Sub-agent context:**
+- Sub-agents receive the recent conversation context (last 5 message pairs) so they understand what the user has been discussing.
+- Sub-agents receive the user's memory (from MEMORY.md) as read-only context.
+- Sub-agents CANNOT spawn other sub-agents, manage cron jobs, or send messages (prevents recursion).
+
+**Examples:**
+
+Simple web research:
+  `spawn({ task: "Search for the latest Node.js LTS version and summarize what's new", type: "researcher" })`
+
+Code task:
+  `spawn({ task: "Write a Python script to parse CSV files in data/", type: "coder" })`
+
+Data analysis:
+  `spawn({ task: "Analyze the log files in data/logs/ and summarize error patterns", type: "analyst" })`
 
 ## subagent_status
 
-Check on background sub-agents. Omit `id` to list all active tasks, or provide one to check a specific task.
+Check on background sub-agents or cancel a running one.
 
-Examples:
+**Parameters:**
+- `id` (optional) — Specific sub-agent task ID to check or cancel.
+- `action` (optional) — `status` (default) or `cancel`.
+
+**Examples:**
 - `subagent_status({})` — list all active sub-agents
 - `subagent_status({ id: "some-task-id" })` — check a specific task
+- `subagent_status({ action: "cancel", id: "some-task-id" })` — cancel a running sub-agent
 
 ## recall_recent
 

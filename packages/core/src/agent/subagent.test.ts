@@ -214,7 +214,7 @@ describe("SubagentManager", () => {
 		expect(manager.getState("nonexistent-id")).toBeUndefined();
 	});
 
-	it("sub-agent tool registry does NOT include message, spawn, or cron tools", () => {
+	it("sub-agent tool registry does NOT include spawn, subagent_status, or cron tools", () => {
 		const generateSpy = vi.fn(async (opts: GenerateOptions) => {
 			// Check that tools don't include restricted tools
 			if (opts.tools !== undefined) {
@@ -222,16 +222,14 @@ describe("SubagentManager", () => {
 				expect(toolNames).not.toContain("spawn");
 				expect(toolNames).not.toContain("subagent_status");
 				expect(toolNames).not.toContain("cron");
-				expect(toolNames).not.toContain("message");
-				// Should have the 7 reduced tools (5 core + 2 web)
+				// Should have core file tools + web_fetch + todo (no web_search without API key)
 				expect(toolNames).toContain("exec");
 				expect(toolNames).toContain("read_file");
 				expect(toolNames).toContain("write_file");
 				expect(toolNames).toContain("edit_file");
 				expect(toolNames).toContain("list_dir");
-				expect(toolNames).toContain("web_search");
 				expect(toolNames).toContain("web_fetch");
-				expect(toolNames.length).toBe(7);
+				expect(toolNames).toContain("todo");
 			}
 			return makeResult();
 		});

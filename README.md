@@ -16,7 +16,7 @@
 - **Messaging channels** — Telegram, WhatsApp, terminal REPL
 - **Tool system** — File I/O, shell execution, web search/fetch, Firecrawl search/crawl, cron scheduling, sub-agent spawning
 - **Skills** — Markdown-driven plugins with two-tier loading (always-on + lazy-loaded)
-- **Sub-agents** — Spawn background tasks with isolated tool sets and timeouts
+- **Sub-agents** — Spawn specialized background agents (researcher, coder, analyst) with context forwarding, memory access, and cancellation
 - **Memory** — Persistent file-based memory with deterministic structured extraction, programmatic daily note rollup, and auto-compaction
 - **Session management** — SQLite-backed conversation history with automatic summarization on trim
 - **Conversation summarization** — Rolling LLM-generated summaries preserve context when history is trimmed
@@ -122,7 +122,7 @@ Direct Baileys integration (no external bridge). Supports all message types, aut
 | `firecrawl_crawl` | Crawl a website and scrape multiple pages via Firecrawl |
 | `cron` | Manage scheduled tasks (add/list/remove/enable/disable) |
 | `recall_recent` | Retrieve past daily notes (last N days) on demand |
-| `spawn` | Spawn sub-agents for background tasks |
+| `spawn` | Spawn specialized sub-agents (researcher/coder/analyst) for background tasks |
 | `todo` | Structured task tracking with add/list/complete/delete actions |
 
 All tools return strings and never throw errors to the LLM.
@@ -156,7 +156,23 @@ When a user sends multiple messages in quick succession (e.g. "check my calendar
 
 ## Sub-agents
 
-Spawn background tasks with isolated tool sets (no message, spawn, or cron tools to prevent recursion). Sub-agents have configurable max iterations (default: 15) and timeout (default: 5 minutes). Results are summarized in a tool-free pass (no spawning during summarization) and routed back to the originating channel.
+Spawn specialized background agents with isolated tool sets (no spawn, subagent_status, or cron tools to prevent recursion). Sub-agents have configurable max iterations (default: 15) and timeout (default: 5 minutes). Results are summarized in a tool-free pass and routed back to the originating channel. Completed/failed results are also injected into the parent session history so the main agent remembers what it delegated.
+
+### Sub-agent Types
+
+| Type | Tool Preset | Best For |
+|------|-------------|----------|
+| `general` (default) | Full (exec, files, web, recall, todo) | Mixed tasks |
+| `researcher` | Read-only (files read, web, recall) | Web research, information gathering |
+| `coder` | Files (exec, read/write/edit, list) | Code writing, file editing, scripts |
+| `analyst` | Full (same as general, data-focused prompt) | Data analysis, comparisons |
+
+### Features
+
+- **Context forwarding** — Sub-agents receive the last 5 user/assistant message pairs from the parent conversation, so they understand what the user has been discussing.
+- **Memory access** — Sub-agents receive the user's long-term memory (MEMORY.md) as read-only context in their system prompt.
+- **Cancellation** — Running sub-agents can be cancelled via `subagent_status({ action: "cancel", id: "..." })`. The abort signal is propagated through to the LLM provider call.
+- **Lifecycle management** — Finished agent state is pruned after 50 entries to prevent memory leaks.
 
 ## Memory
 
@@ -274,7 +290,7 @@ workspace/
 ```bash
 pnpm install          # Install dependencies
 pnpm build            # Build all packages
-pnpm test             # Run all tests (846 tests)
+pnpm test             # Run all tests (856 tests)
 pnpm typecheck        # Type checking
 pnpm lint             # Lint with Biome
 ```

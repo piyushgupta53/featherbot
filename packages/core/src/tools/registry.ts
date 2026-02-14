@@ -18,6 +18,10 @@ export class ToolRegistry {
 		this.evictionOptions = options;
 	}
 
+	getEvictionOptions(): EvictLargeResultOptions | undefined {
+		return this.evictionOptions;
+	}
+
 	register(tool: Tool): void {
 		if (this.tools.has(tool.name)) {
 			throw new Error(`Tool '${tool.name}' is already registered`);

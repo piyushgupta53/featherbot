@@ -1,4 +1,6 @@
-export type SubagentStatus = "running" | "completed" | "failed";
+import type { SubagentSpec } from "./subagent-specs.js";
+
+export type SubagentStatus = "running" | "completed" | "failed" | "cancelled";
 
 export interface SubagentState {
 	id: string;
@@ -10,10 +12,16 @@ export interface SubagentState {
 	completedAt?: Date;
 	originChannel: string;
 	originChatId: string;
+	spec: SubagentSpec;
+	abortController: AbortController;
 }
 
 export interface SpawnOptions {
 	task: string;
 	originChannel: string;
 	originChatId: string;
+	type?: string;
+	model?: string;
+	parentContext?: string;
+	memoryContext?: string;
 }

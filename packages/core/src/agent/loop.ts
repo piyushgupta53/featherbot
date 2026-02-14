@@ -56,6 +56,11 @@ export class AgentLoop {
 		return history ? history.getMessages() : [];
 	}
 
+	injectMessage(sessionKey: SessionKey, message: LLMMessage): void {
+		const history = this.getOrCreateHistory(sessionKey);
+		history.add(message);
+	}
+
 	async processMessage(inbound: InboundMessage): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = `${inbound.channel}:${inbound.chatId}`;
 		const sessionContext: SessionContext = {
@@ -73,6 +78,7 @@ export class AgentLoop {
 			sessionKey?: string;
 			skipHistory?: boolean;
 			maxSteps?: number;
+			signal?: AbortSignal;
 		},
 	): Promise<AgentLoopResult> {
 		const sessionKey: SessionKey = (options?.sessionKey as SessionKey) ?? "direct:default";
@@ -82,7 +88,14 @@ export class AgentLoop {
 			options?.systemPrompt !== undefined && this.contextBuilder !== undefined
 				? { ...builtCtx, systemPrompt: `${options.systemPrompt}\n\n${builtCtx.systemPrompt}` }
 				: builtCtx;
-		return this.run(sessionKey, message, ctx, options?.skipHistory, options?.maxSteps);
+		return this.run(
+			sessionKey,
+			message,
+			ctx,
+			options?.skipHistory,
+			options?.maxSteps,
+			options?.signal,
+		);
 	}
 
 	private getOrCreateHistory(sessionKey: SessionKey): ConversationHistory {
@@ -125,6 +138,7 @@ export class AgentLoop {
 		ctx: ContextBuilderResult,
 		skipHistory?: boolean,
 		maxStepsOverride?: number,
+		signal?: AbortSignal,
 	): Promise<AgentLoopResult> {
 		const history = this.getOrCreateHistory(sessionKey);
 
@@ -147,11 +161,13 @@ export class AgentLoop {
 
 		const effectiveMaxSteps = maxStepsOverride ?? config.maxToolIterations;
 		const result = await provider.generate({
+			model: config.model,
 			messages,
 			tools: effectiveMaxSteps > 1 && Object.keys(toolMap).length > 0 ? toolMap : undefined,
 			maxSteps: effectiveMaxSteps,
 			temperature: config.temperature,
 			maxTokens: config.maxTokens,
+			signal,
 		});
 
 		const steps = result.toolCalls.length > 0 ? result.toolCalls.length + 1 : 1;

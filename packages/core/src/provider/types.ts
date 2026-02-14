@@ -14,6 +14,7 @@ export interface GenerateOptions {
 	maxSteps?: number;
 	temperature?: number;
 	maxTokens?: number;
+	signal?: AbortSignal;
 }
 
 export interface GenerateResult {

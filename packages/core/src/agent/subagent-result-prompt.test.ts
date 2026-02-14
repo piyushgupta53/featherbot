@@ -1,19 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { buildSubagentResultPrompt } from "./subagent-result-prompt.js";
+import { BUILTIN_SPECS } from "./subagent-specs.js";
 import type { SubagentState } from "./subagent-types.js";
+
+function makeState(
+	overrides: Partial<SubagentState> & { id: string; task: string; status: SubagentState["status"] },
+): SubagentState {
+	return {
+		startedAt: new Date("2026-02-09T10:00:00Z"),
+		originChannel: "telegram",
+		originChatId: "12345",
+		spec: BUILTIN_SPECS.general,
+		abortController: new AbortController(),
+		...overrides,
+	};
+}
 
 describe("buildSubagentResultPrompt", () => {
 	it("generates a summarization prompt for completed tasks", () => {
-		const state: SubagentState = {
+		const state = makeState({
 			id: "test-id",
 			task: "Research the best credit cards for travel rewards",
 			status: "completed",
 			result: "Top 3 cards: Chase Sapphire Reserve, Amex Gold, Capital One Venture X",
-			startedAt: new Date("2026-02-09T10:00:00Z"),
 			completedAt: new Date("2026-02-09T10:01:00Z"),
-			originChannel: "telegram",
-			originChatId: "12345",
-		};
+		});
 
 		const prompt = buildSubagentResultPrompt(state);
 
@@ -25,16 +36,15 @@ describe("buildSubagentResultPrompt", () => {
 	});
 
 	it("generates an error prompt for failed tasks", () => {
-		const state: SubagentState = {
+		const state = makeState({
 			id: "test-id",
 			task: "Fetch weather data from API",
 			status: "failed",
 			error: "Network timeout after 30s",
-			startedAt: new Date("2026-02-09T10:00:00Z"),
 			completedAt: new Date("2026-02-09T10:00:30Z"),
 			originChannel: "whatsapp",
 			originChatId: "67890",
-		};
+		});
 
 		const prompt = buildSubagentResultPrompt(state);
 
@@ -45,15 +55,14 @@ describe("buildSubagentResultPrompt", () => {
 	});
 
 	it("handles completed task with no result", () => {
-		const state: SubagentState = {
+		const state = makeState({
 			id: "test-id",
 			task: "Clean up temp files",
 			status: "completed",
-			startedAt: new Date("2026-02-09T10:00:00Z"),
 			completedAt: new Date("2026-02-09T10:00:05Z"),
 			originChannel: "terminal",
 			originChatId: "cli",
-		};
+		});
 
 		const prompt = buildSubagentResultPrompt(state);
 
@@ -62,15 +71,12 @@ describe("buildSubagentResultPrompt", () => {
 	});
 
 	it("handles failed task with no error message", () => {
-		const state: SubagentState = {
+		const state = makeState({
 			id: "test-id",
 			task: "Process data",
 			status: "failed",
-			startedAt: new Date("2026-02-09T10:00:00Z"),
 			completedAt: new Date("2026-02-09T10:00:10Z"),
-			originChannel: "telegram",
-			originChatId: "12345",
-		};
+		});
 
 		const prompt = buildSubagentResultPrompt(state);
 
@@ -79,27 +85,66 @@ describe("buildSubagentResultPrompt", () => {
 	});
 
 	it("does not mention sub-agent in instructions", () => {
-		const completedState: SubagentState = {
+		const completedState = makeState({
 			id: "test-id",
 			task: "Do something",
 			status: "completed",
 			result: "Done",
-			startedAt: new Date(),
-			originChannel: "telegram",
-			originChatId: "123",
-		};
+		});
 
-		const failedState: SubagentState = {
-			...completedState,
+		const failedState = makeState({
+			id: "test-id",
+			task: "Do something",
 			status: "failed",
 			error: "Oops",
-			result: undefined,
-		};
+		});
 
 		const completedPrompt = buildSubagentResultPrompt(completedState);
 		const failedPrompt = buildSubagentResultPrompt(failedState);
 
 		expect(completedPrompt).toContain("Do NOT mention");
 		expect(failedPrompt).toContain("Do NOT mention");
+	});
+
+	it("generates a cancellation prompt for cancelled tasks", () => {
+		const state = makeState({
+			id: "test-id",
+			task: "Long running analysis",
+			status: "cancelled",
+		});
+
+		const prompt = buildSubagentResultPrompt(state);
+
+		expect(prompt).toContain("was cancelled");
+		expect(prompt).toContain("Long running analysis");
+		expect(prompt).toContain("retry or take a different approach");
+	});
+
+	it("includes spec label for non-general specs", () => {
+		const state = makeState({
+			id: "test-id",
+			task: "Research topic",
+			status: "completed",
+			result: "Found info",
+			spec: BUILTIN_SPECS.researcher,
+		});
+
+		const prompt = buildSubagentResultPrompt(state);
+
+		expect(prompt).toContain("(researcher)");
+	});
+
+	it("omits spec label for general spec", () => {
+		const state = makeState({
+			id: "test-id",
+			task: "Do something",
+			status: "completed",
+			result: "Done",
+			spec: BUILTIN_SPECS.general,
+		});
+
+		const prompt = buildSubagentResultPrompt(state);
+
+		expect(prompt).not.toContain("(general)");
 	});
 });

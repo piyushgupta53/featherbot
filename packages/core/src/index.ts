@@ -108,17 +108,22 @@ export type {
 } from "./tools/index.js";
 export {
 	AgentLoop,
+	BLOCKED_TOOLS,
+	BUILTIN_SPECS,
+	TOOL_PRESET_MAP,
 	buildSubagentResultPrompt,
 	buildToolMap,
 	ContextBuilder,
 	createAgentLoop,
 	InMemoryHistory,
 	parseTimezoneFromUserMd,
+	resolveSpec,
 	SubagentManager,
 } from "./agent/index.js";
 export type {
 	AgentLoopOptions,
 	AgentLoopResult,
+	BuiltinSpecName,
 	ContextBuilderOptions,
 	ContextBuilderResult,
 	ConversationHistory,
@@ -126,8 +131,10 @@ export type {
 	SpawnOptions,
 	StepCallback,
 	StepEvent,
+	SubagentSpec,
 	SubagentState,
 	SubagentStatus,
+	ToolPreset,
 } from "./agent/index.js";
 export {
 	createMemoryStore,

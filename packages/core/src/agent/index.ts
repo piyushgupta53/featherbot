@@ -59,6 +59,17 @@ export type {
 } from "./types.js";
 export { SubagentManager } from "./subagent.js";
 export { buildSubagentResultPrompt } from "./subagent-result-prompt.js";
+export {
+	BLOCKED_TOOLS,
+	BUILTIN_SPECS,
+	TOOL_PRESET_MAP,
+	resolveSpec,
+} from "./subagent-specs.js";
+export type {
+	BuiltinSpecName,
+	SubagentSpec,
+	ToolPreset,
+} from "./subagent-specs.js";
 export type {
 	SpawnOptions,
 	SubagentState,

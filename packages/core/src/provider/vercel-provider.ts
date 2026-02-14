@@ -200,6 +200,7 @@ export class VercelLLMProvider implements LLMProvider {
 					temperature: options.temperature ?? this.defaultTemperature,
 					maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
 					stopWhen: options.maxSteps ? stepCountIs(options.maxSteps) : undefined,
+					abortSignal: options.signal,
 				}),
 			);
 
