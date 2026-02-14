@@ -40,7 +40,7 @@ Add, remove, or edit tasks using the filesystem tools (`read_file`, `write_file`
 A prompt template that guides the agent's autonomous behavior. It includes:
 
 - Current time and day of week (injected automatically)
-- Rules for proactive messaging (silence is fine, max once per day, match user tone)
+- Rules for proactive messaging (silence is fine, don't repeat, batch related updates, match user tone)
 - The **SKIP** convention — respond with SKIP if nothing is actionable
 
 ## Proactive Behavior

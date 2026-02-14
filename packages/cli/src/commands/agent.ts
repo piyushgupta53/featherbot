@@ -17,7 +17,12 @@ import {
 	parseTimezoneFromUserMd,
 } from "@featherbot/core";
 import { HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
+import type { ProactiveSendRecord } from "@featherbot/scheduler";
 import type { Command } from "commander";
+
+const PROACTIVE_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours between sends
+const PROACTIVE_MAX_PER_DAY = 5;
+const PROACTIVE_HISTORY_MAX = 20; // keep last 20 entries
 
 function resolveHome(path: string): string {
 	return path.startsWith("~") ? join(homedir(), path.slice(1)) : resolve(path);
@@ -25,6 +30,7 @@ function resolveHome(path: string): string {
 
 interface HeartbeatState {
 	lastProactiveSentAt?: string;
+	recentSends?: ProactiveSendRecord[];
 }
 
 function getDateKey(date: Date, timezone?: string): string {
@@ -35,6 +41,11 @@ function getDateKey(date: Date, timezone?: string): string {
 		month: "2-digit",
 		day: "2-digit",
 	}).format(date);
+}
+
+function summarize(text: string, maxLen = 120): string {
+	const oneLine = text.replace(/\n/g, " ").trim();
+	return oneLine.length <= maxLen ? oneLine : `${oneLine.slice(0, maxLen)}...`;
 }
 
 function readHeartbeatState(path: string): HeartbeatState {
@@ -173,19 +184,33 @@ export async function runRepl(): Promise<void> {
 			intervalMs: config.heartbeat.intervalMs,
 			heartbeatFilePath: join(workspace, config.heartbeat.heartbeatFile),
 			onTick: async (content) => {
-				const prompt = buildHeartbeatPrompt(content, userTimezone);
+				const sends = heartbeatState.recentSends ?? [];
+				const prompt = buildHeartbeatPrompt(content, userTimezone, sends);
 				const result = await agentLoop.processDirect(prompt, {
 					sessionKey: "system:heartbeat",
 					systemPrompt: prompt,
 					skipHistory: true,
 				});
 				if (!result.text || result.text.startsWith("SKIP")) return;
+
 				const now = new Date();
+
+				// Soft rate limit: 2-hour cooldown between sends
 				const lastSent = heartbeatState.lastProactiveSentAt
 					? new Date(heartbeatState.lastProactiveSentAt)
 					: undefined;
-				if (lastSent && getDateKey(lastSent, userTimezone) === getDateKey(now, userTimezone)) {
-					console.log("[metrics] proactive_blocked_daily_limit");
+				if (lastSent && now.getTime() - lastSent.getTime() < PROACTIVE_COOLDOWN_MS) {
+					console.log("[metrics] proactive_blocked_cooldown");
+					return;
+				}
+
+				// Safety cap: max N sends per calendar day
+				const todayKey = getDateKey(now, userTimezone);
+				const todaySends = sends.filter(
+					(s) => getDateKey(new Date(s.sentAt), userTimezone) === todayKey,
+				);
+				if (todaySends.length >= PROACTIVE_MAX_PER_DAY) {
+					console.log("[metrics] proactive_blocked_daily_cap");
 					return;
 				}
 
@@ -202,7 +227,18 @@ export async function runRepl(): Promise<void> {
 					}),
 					timestamp: new Date(),
 				});
-				heartbeatState = { ...heartbeatState, lastProactiveSentAt: now.toISOString() };
+
+				// Record the send with a summary
+				const record: ProactiveSendRecord = {
+					summary: summarize(result.text),
+					sentAt: now.toISOString(),
+				};
+				const updated = [...sends, record].slice(-PROACTIVE_HISTORY_MAX);
+				heartbeatState = {
+					...heartbeatState,
+					lastProactiveSentAt: now.toISOString(),
+					recentSends: updated,
+				};
 				writeHeartbeatState(heartbeatStatePath, heartbeatState);
 				console.log("[metrics] proactive_sent");
 			},

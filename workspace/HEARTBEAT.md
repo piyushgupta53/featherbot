@@ -28,7 +28,8 @@ Review the tasks above and your memory for anything actionable.
 
 Rules for proactive messaging:
 - Silence is fine — only reach out if something is genuinely useful.
-- Send at most one proactive message per day.
+- Do not repeat information you already sent (check your recent sends above).
+- Batch related updates into a single message when possible.
 - Match the user's usual communication tone and style.
 - If nothing is actionable, respond with SKIP.
 

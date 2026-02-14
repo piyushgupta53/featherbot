@@ -20,3 +20,4 @@ export type { CronServiceOptions } from "./service.js";
 export { HeartbeatService } from "./heartbeat-service.js";
 export type { HeartbeatServiceOptions } from "./heartbeat-service.js";
 export { buildHeartbeatPrompt } from "./heartbeat-prompt.js";
+export type { ProactiveSendRecord } from "./heartbeat-prompt.js";
