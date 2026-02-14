@@ -40,6 +40,7 @@ export class AgentLoop {
 				agentName: "FeatherBot",
 				memoryStore: options.memoryStore,
 				skillsLoader: options.skillsLoader,
+				registeredToolNames: options.toolRegistry.getRegisteredNames(),
 			});
 		}
 		const summarizationEnabled = options.sessionConfig?.summarizationEnabled ?? true;

@@ -18,22 +18,23 @@ describe("ExecTool", () => {
 	});
 
 	describe("execute", () => {
-		it("runs a simple command and returns output", async () => {
+		it("runs a simple command and returns output with success status", async () => {
 			const tool = new ExecTool(DEFAULT_OPTIONS);
 			const result = await tool.execute({ command: "echo hello world" });
-			expect(result).toBe("hello world");
+			expect(result).toBe("[Command succeeded]\nhello world");
 		});
 
 		it("captures stderr in output", async () => {
 			const tool = new ExecTool(DEFAULT_OPTIONS);
 			const result = await tool.execute({ command: "echo error >&2" });
-			expect(result).toBe("error");
+			expect(result).toContain("[Command succeeded]");
+			expect(result).toContain("error");
 		});
 
-		it("returns exit code for non-zero exit", async () => {
+		it("returns failed status with exit code for non-zero exit", async () => {
 			const tool = new ExecTool(DEFAULT_OPTIONS);
 			const result = await tool.execute({ command: "exit 42" });
-			expect(result).toContain("Exit code: 42");
+			expect(result).toContain("[Command failed with exit code 42]");
 		});
 
 		it("combines stdout and stderr", async () => {
@@ -41,8 +42,15 @@ describe("ExecTool", () => {
 			const result = await tool.execute({
 				command: "echo out && echo err >&2",
 			});
+			expect(result).toContain("[Command succeeded]");
 			expect(result).toContain("out");
 			expect(result).toContain("err");
+		});
+
+		it("returns success status for empty output", async () => {
+			const tool = new ExecTool(DEFAULT_OPTIONS);
+			const result = await tool.execute({ command: "true" });
+			expect(result).toBe("[Command succeeded]");
 		});
 	});
 
@@ -110,7 +118,7 @@ describe("ExecTool", () => {
 			const result = await tool.execute({
 				command: `python3 -c "print('x' * 15000)"`,
 			});
-			expect(result.length).toBeLessThanOrEqual(10_000 + 30);
+			expect(result).toContain("[Command succeeded]");
 			expect(result).toContain("... [output truncated]");
 		});
 	});
@@ -133,7 +141,7 @@ describe("ExecTool", () => {
 				restrictToWorkspace: true,
 			});
 			const result = await tool.execute({ command: "pwd" });
-			expect(result).toBe(tempDir);
+			expect(result).toBe(`[Command succeeded]\n${tempDir}`);
 		});
 
 		it("uses workingDir when provided", async () => {
@@ -143,7 +151,7 @@ describe("ExecTool", () => {
 				restrictToWorkspace: false,
 			});
 			const result = await tool.execute({ command: "pwd", workingDir: tempDir });
-			expect(result).toBe(tempDir);
+			expect(result).toBe(`[Command succeeded]\n${tempDir}`);
 		});
 
 		it("uses defaultCwd when no workingDir is provided", async () => {
@@ -154,7 +162,7 @@ describe("ExecTool", () => {
 				defaultCwd: tempDir,
 			});
 			const result = await tool.execute({ command: "pwd" });
-			expect(result).toBe(tempDir);
+			expect(result).toBe(`[Command succeeded]\n${tempDir}`);
 		});
 
 		it("prefers workingDir over defaultCwd", async () => {
@@ -165,7 +173,7 @@ describe("ExecTool", () => {
 				defaultCwd: "/tmp",
 			});
 			const result = await tool.execute({ command: "pwd", workingDir: tempDir });
-			expect(result).toBe(tempDir);
+			expect(result).toBe(`[Command succeeded]\n${tempDir}`);
 		});
 
 		it("prefers restrictToWorkspace over defaultCwd", async () => {
@@ -176,7 +184,7 @@ describe("ExecTool", () => {
 				defaultCwd: "/tmp",
 			});
 			const result = await tool.execute({ command: "pwd" });
-			expect(result).toBe(tempDir);
+			expect(result).toBe(`[Command succeeded]\n${tempDir}`);
 		});
 	});
 });

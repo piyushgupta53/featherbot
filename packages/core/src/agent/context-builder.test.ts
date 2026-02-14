@@ -5,7 +5,11 @@ import { platform } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { SkillsLoader } from "../skills/loader.js";
-import { ContextBuilder, parseTimezoneFromUserMd } from "./context-builder.js";
+import {
+	ContextBuilder,
+	filterToolDocumentation,
+	parseTimezoneFromUserMd,
+} from "./context-builder.js";
 import type {
 	ContextBuilderOptions,
 	ContextBuilderResult,
@@ -656,6 +660,196 @@ describe("ContextBuilder", () => {
 			});
 			const result = await builder.build();
 			expect(result.userTimezone).toBeUndefined();
+		});
+	});
+
+	describe("enhanced memory management", () => {
+		it("contains first-action priority instruction", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: mockMemoryStore(async () => "Some memory"),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("First-Action Priority");
+			expect(systemPrompt).toContain("before responding to the user");
+		});
+
+		it("contains when-to-update triggers list", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: mockMemoryStore(async () => "Some memory"),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### When to Update Memory");
+			expect(systemPrompt).toContain("User preferences");
+			expect(systemPrompt).toContain("Project context");
+			expect(systemPrompt).toContain("Tool usage patterns");
+		});
+
+		it("contains when-not-to-update exclusions list", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: mockMemoryStore(async () => "Some memory"),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### When NOT to Update Memory");
+			expect(systemPrompt).toContain("Transient status");
+			expect(systemPrompt).toContain("One-time task requests");
+			expect(systemPrompt).toContain("Acknowledgments, small talk");
+		});
+
+		it("contains credential storage prohibition", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: mockMemoryStore(async () => "Some memory"),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### Security: No Credential Storage");
+			expect(systemPrompt).toContain("NEVER store API keys");
+			expect(systemPrompt).toContain("security-critical");
+		});
+
+		it("preserves existing corrections, daily note, and heartbeat sections", async () => {
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				memoryStore: mockMemoryStore(async () => "Some memory"),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("### Corrections — Highest Priority");
+			expect(systemPrompt).toContain("### Daily Note Format");
+			expect(systemPrompt).toContain("### Heartbeat File");
+		});
+	});
+
+	describe("TOOLS.md filtering", () => {
+		const toolsMdContent = [
+			"# Available Tools",
+			"",
+			"## Workspace Directories",
+			"",
+			"- **data/** — Persistent outputs",
+			"",
+			"## exec",
+			"",
+			"Run a shell command.",
+			"",
+			"## web_search",
+			"",
+			"Search the web using Brave Search API.",
+			"",
+			"## firecrawl_search",
+			"",
+			"Search with full scraped content via Firecrawl.",
+		].join("\n");
+
+		it("filters out tools not in registered set", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(join(ws, "TOOLS.md"), toolsMdContent);
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				bootstrapFiles: ["TOOLS.md"],
+				registeredToolNames: new Set(["exec"]),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("## exec");
+			expect(systemPrompt).not.toContain("## web_search");
+			expect(systemPrompt).not.toContain("## firecrawl_search");
+		});
+
+		it("preserves non-tool sections like Workspace Directories", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(join(ws, "TOOLS.md"), toolsMdContent);
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				bootstrapFiles: ["TOOLS.md"],
+				registeredToolNames: new Set(["exec"]),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("Workspace Directories");
+			expect(systemPrompt).toContain("Persistent outputs");
+		});
+
+		it("does not filter when registeredToolNames is not provided", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(join(ws, "TOOLS.md"), toolsMdContent);
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				bootstrapFiles: ["TOOLS.md"],
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("## exec");
+			expect(systemPrompt).toContain("## web_search");
+			expect(systemPrompt).toContain("## firecrawl_search");
+		});
+
+		it("keeps all registered tools", async () => {
+			const ws = await makeTempWorkspace();
+			await writeFile(join(ws, "TOOLS.md"), toolsMdContent);
+			const builder = new ContextBuilder({
+				...defaultOptions,
+				workspacePath: ws,
+				bootstrapFiles: ["TOOLS.md"],
+				registeredToolNames: new Set(["exec", "web_search", "firecrawl_search"]),
+			});
+			const { systemPrompt } = await builder.build();
+			expect(systemPrompt).toContain("## exec");
+			expect(systemPrompt).toContain("## web_search");
+			expect(systemPrompt).toContain("## firecrawl_search");
+		});
+	});
+
+	describe("filterToolDocumentation", () => {
+		const content = [
+			"# Available Tools",
+			"",
+			"## Workspace Directories",
+			"",
+			"- **data/** — outputs",
+			"",
+			"## exec",
+			"",
+			"Run shell commands.",
+			"",
+			"## web_search",
+			"",
+			"Search the web.",
+			"",
+			"## firecrawl_crawl",
+			"",
+			"Crawl a website.",
+		].join("\n");
+
+		it("removes unregistered tool sections", () => {
+			const result = filterToolDocumentation(content, new Set(["exec"]));
+			expect(result).toContain("## exec");
+			expect(result).not.toContain("## web_search");
+			expect(result).not.toContain("## firecrawl_crawl");
+		});
+
+		it("preserves non-tool sections", () => {
+			const result = filterToolDocumentation(content, new Set(["exec"]));
+			expect(result).toContain("## Workspace Directories");
+			expect(result).toContain("# Available Tools");
+		});
+
+		it("preserves all sections when all tools are registered", () => {
+			const result = filterToolDocumentation(
+				content,
+				new Set(["exec", "web_search", "firecrawl_crawl"]),
+			);
+			expect(result).toContain("## exec");
+			expect(result).toContain("## web_search");
+			expect(result).toContain("## firecrawl_crawl");
+		});
+
+		it("handles empty registered set", () => {
+			const result = filterToolDocumentation(content, new Set());
+			expect(result).toContain("## Workspace Directories");
+			expect(result).not.toContain("## exec");
+			expect(result).not.toContain("## web_search");
 		});
 	});
 

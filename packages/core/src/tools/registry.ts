@@ -76,6 +76,10 @@ export class ToolRegistry {
 		}
 	}
 
+	getRegisteredNames(): Set<string> {
+		return new Set(this.tools.keys());
+	}
+
 	getDefinitions(): ToolRegistryDefinition[] {
 		const definitions: ToolRegistryDefinition[] = [];
 		for (const tool of this.tools.values()) {

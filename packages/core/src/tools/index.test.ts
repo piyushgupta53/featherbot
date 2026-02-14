@@ -94,7 +94,7 @@ describe("createToolRegistry", () => {
 	it("exec tool is callable via registry", async () => {
 		const registry = createToolRegistry(makeConfig());
 		const result = await registry.execute("exec", { command: "echo hello", workingDir: "/tmp" });
-		expect(result).toBe("hello");
+		expect(result).toBe("[Command succeeded]\nhello");
 	});
 
 	it("read_file returns error for missing file", async () => {

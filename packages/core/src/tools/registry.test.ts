@@ -140,6 +140,34 @@ describe("ToolRegistry", () => {
 		});
 	});
 
+	describe("getRegisteredNames", () => {
+		it("returns a set of all registered tool names", () => {
+			const registry = new ToolRegistry();
+			registry.register(createMockTool({ name: "tool_a" }));
+			registry.register(createMockTool({ name: "tool_b" }));
+
+			const names = registry.getRegisteredNames();
+			expect(names).toBeInstanceOf(Set);
+			expect(names.size).toBe(2);
+			expect(names.has("tool_a")).toBe(true);
+			expect(names.has("tool_b")).toBe(true);
+		});
+
+		it("returns empty set when no tools registered", () => {
+			const registry = new ToolRegistry();
+			const names = registry.getRegisteredNames();
+			expect(names.size).toBe(0);
+		});
+
+		it("returns a new set (not a reference to internal state)", () => {
+			const registry = new ToolRegistry();
+			registry.register(createMockTool({ name: "tool_a" }));
+			const names = registry.getRegisteredNames();
+			names.add("fake_tool");
+			expect(registry.has("fake_tool")).toBe(false);
+		});
+	});
+
 	describe("getDefinitions", () => {
 		it("returns definitions for all registered tools", () => {
 			const registry = new ToolRegistry();

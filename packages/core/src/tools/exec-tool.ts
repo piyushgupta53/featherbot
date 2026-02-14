@@ -78,14 +78,15 @@ export class ExecTool implements Tool {
 							return;
 						}
 						if (error.code !== undefined) {
-							resolve(`Exit code: ${error.code}\n${output}`.trim());
+							resolve(`[Command failed with exit code ${error.code}]\n${output}`.trim());
 							return;
 						}
 						resolve(`Error: ${error.message}\n${output}`.trim());
 						return;
 					}
 
-					resolve(output.trim());
+					const successOutput = output.trim();
+					resolve(successOutput ? `[Command succeeded]\n${successOutput}` : "[Command succeeded]");
 				},
 			);
 

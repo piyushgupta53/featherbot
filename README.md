@@ -127,6 +127,8 @@ Direct Baileys integration (no external bridge). Supports all message types, aut
 
 All tools return strings and never throw errors to the LLM.
 
+**Dynamic tool filtering** — Tools that require API keys (e.g., web_search, firecrawl_search) are hidden from the agent's system prompt entirely — including their TOOLS.md documentation — when the corresponding keys are not configured. This reduces prompt token waste and prevents the LLM from attempting to use unavailable tools.
+
 ## Skills
 
 Skills are markdown-driven plugins loaded from the workspace. FeatherBot uses a two-tier system to prevent prompt bloat:
@@ -183,7 +185,13 @@ File-based storage in `workspace/memory/` with a two-layer persistence strategy:
 | `MEMORY.md` | Long-term memory (Facts, Observed Patterns, Pending) |
 | `YYYY-MM-DD.md` | Daily notes (transient, priority-tagged observations) |
 
+**First-action memory priority** — When the agent detects information worth remembering, memory updates are its first action — before responding to the user. This prevents data loss from process crashes or rapid follow-up messages.
+
 **Inline writes (real-time)** — The agent writes to MEMORY.md via `edit_file` during conversation when the user shares personal info or says "remember this."
+
+**Explicit guidelines** — The system prompt includes concrete "when to update" triggers (preferences, corrections, project context, tool patterns) and "when NOT to update" exclusions (transient status, small talk, duplicates) to reduce memory pollution and ensure the right information is captured.
+
+**Credential storage prohibition** — API keys, passwords, tokens, and secrets are never stored in memory files, daily notes, or workspace files. Credentials shared during a session are used ephemerally only.
 
 **Structured extraction (post-idle)** — After 5 minutes of idle (configurable), the LLM returns structured JSON via `generateStructured()` with automatic text-mode fallback for models that lack native JSON mode — facts, patterns, pending items, corrections, and priority-tagged observations. Code then handles persistence deterministically: parse MEMORY.md, merge with dedup, render, write. No tool calls, no prompt-following — just data in, file out.
 

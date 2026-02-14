@@ -15,6 +15,7 @@ export interface ContextBuilderOptions {
 	agentName: string;
 	memoryStore?: MemoryStore;
 	skillsLoader?: SkillsLoader;
+	registeredToolNames?: Set<string>;
 }
 
 export interface ContextBuilderResult {
@@ -29,6 +30,7 @@ export class ContextBuilder {
 	readonly agentName: string;
 	readonly memoryStore?: MemoryStore;
 	readonly skillsLoader?: SkillsLoader;
+	readonly registeredToolNames?: Set<string>;
 
 	constructor(options: ContextBuilderOptions) {
 		this.workspacePath = options.workspacePath;
@@ -36,6 +38,7 @@ export class ContextBuilder {
 		this.agentName = options.agentName;
 		this.memoryStore = options.memoryStore;
 		this.skillsLoader = options.skillsLoader;
+		this.registeredToolNames = options.registeredToolNames;
 	}
 
 	async build(sessionContext?: SessionContext): Promise<ContextBuilderResult> {
@@ -127,13 +130,36 @@ export class ContextBuilder {
 			"## Memory Management",
 			"You have a memory file at memory/MEMORY.md with sections: Facts, Observed Patterns, and Pending.",
 			"When you learn something worth remembering, you MUST call edit_file on memory/MEMORY.md to persist it. Never claim you stored something in memory without a successful edit_file result.",
-			"Only log what matters:",
+			"",
+			"**First-Action Priority:** When you detect information worth remembering, updating memory must be your FIRST action — before responding to the user. Do not defer memory writes to the end of your response or rely on background extraction. If the process crashes or the user sends rapid messages, deferred writes are lost.",
 			"",
 			"**Facts** — User preferences, personal details, projects, or things they explicitly ask you to remember.",
 			"**Observed Patterns** — Recurring behaviors you notice over multiple conversations (e.g., always asks for concise answers, works late at night, prefers Python over JS).",
 			"**Pending** — Follow-ups, reminders, or things the user mentioned wanting to do later.",
 			"",
-			"Guidelines:",
+			"### When to Update Memory",
+			"- User preferences (format, tone, tools, schedule, dietary, aesthetic)",
+			"- Corrections or feedback (highest priority — see below)",
+			"- Role descriptions, job title, company, team",
+			"- Project context (repos, tech stack, deadlines, goals)",
+			"- Tool usage patterns (preferred commands, workflows)",
+			"- Personal details (name, location, family, pets)",
+			"- Recurring behaviors observed across conversations",
+			"- Information required for tool use (API endpoints, server addresses, account names)",
+			'- Explicit requests ("remember this", "note that", "keep in mind")',
+			"",
+			"### When NOT to Update Memory",
+			'- Transient status updates ("I\'m tired", "just got home", "eating lunch")',
+			"- One-time task requests with no reusable context",
+			"- Acknowledgments, small talk, greetings, or filler",
+			"- Information already present in memory (avoid duplicates)",
+			"- Stale or superseded context (update or remove instead)",
+			"- Intermediate reasoning or scratch work",
+			"",
+			"### Security: No Credential Storage",
+			"NEVER store API keys, passwords, tokens, secrets, or credentials in memory files, daily notes, or any workspace file. This is a security-critical rule. If the user shares credentials, use them in the current session only — do not persist them.",
+			"",
+			"### General Guidelines",
 			"- Do NOT log every message or trivial details — only meaningful, reusable information.",
 			'- If the user says "remember this" or similar, always persist it.',
 			"- When the user shares personal info (name, location, workplace, preferences), call edit_file IMMEDIATELY in the same turn — do not just acknowledge it.",
@@ -257,8 +283,11 @@ export class ContextBuilder {
 		const contentMap = new Map<string, string>();
 		for (const filename of this.bootstrapFiles) {
 			const filePath = join(this.workspacePath, filename);
-			const content = (await this.readFileSafe(filePath)).trim();
+			let content = (await this.readFileSafe(filePath)).trim();
 			if (content) {
+				if (filename === "TOOLS.md" && this.registeredToolNames !== undefined) {
+					content = filterToolDocumentation(content, this.registeredToolNames);
+				}
 				sections.push(`## ${filename}\n${content}`);
 				contentMap.set(filename, content);
 			}
@@ -276,6 +305,42 @@ export class ContextBuilder {
 			throw err;
 		}
 	}
+}
+
+/**
+ * Known non-tool section headers in TOOLS.md that should always be preserved
+ * (e.g., "Workspace Directories", "Available Tools").
+ */
+const NON_TOOL_HEADERS = new Set(["available tools", "workspace directories"]);
+
+/**
+ * Filter TOOLS.md content to only include sections for registered tools.
+ * Non-tool sections (like "Workspace Directories") are always preserved.
+ * Sections whose header matches a registered tool name are kept; others are removed.
+ */
+export function filterToolDocumentation(content: string, registeredToolNames: Set<string>): string {
+	// Split on ## headers, preserving the header text
+	const parts = content.split(/^(?=## )/m);
+
+	const filtered = parts.filter((part) => {
+		const headerMatch = part.match(/^## (.+)/);
+		if (!headerMatch?.[1]) {
+			// Preamble before any header — keep it
+			return true;
+		}
+		const header = headerMatch[1].trim().toLowerCase();
+
+		// Always keep non-tool sections
+		if (NON_TOOL_HEADERS.has(header)) {
+			return true;
+		}
+
+		// Check if this header matches a registered tool name
+		// Tool names use underscores (e.g., web_search), headers may match directly
+		return registeredToolNames.has(header);
+	});
+
+	return filtered.join("").trim();
 }
 
 /**
