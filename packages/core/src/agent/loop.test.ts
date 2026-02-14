@@ -1072,13 +1072,44 @@ describe("buildToolLog", () => {
 		expect(log).toContain("→ Written successfully");
 	});
 
-	it("truncates long tool results", () => {
-		const longResult = "x".repeat(500);
+	it("keeps small results in full", () => {
+		const smallResult = "Operation completed successfully";
+		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "exec", content: smallResult }];
+		const log = buildToolLog(toolCalls, toolResults);
+		expect(log).toContain(`→ ${smallResult}`);
+	});
+
+	it("truncates results over 500 chars", () => {
+		const longResult = "x".repeat(600);
 		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
 		const toolResults = [{ toolCallId: "tc1", toolName: "exec", content: longResult }];
 		const log = buildToolLog(toolCalls, toolResults);
 		expect(log).not.toContain(longResult);
 		expect(log).toContain("…");
+		// Should keep first 500 chars
+		expect(log).toContain("x".repeat(500));
+	});
+
+	it("extracts file pointer from evicted results", () => {
+		const evictedResult = [
+			"[Result too large (25000 chars) — saved to scratch/.tool-results/abc-123.txt]",
+			"",
+			"=== HEAD ===",
+			"first part of the content...",
+			"",
+			"=== TAIL ===",
+			"...last part of the content",
+			"",
+			"[Full content: scratch/.tool-results/abc-123.txt — use read_file to access]",
+		].join("\n");
+		const toolCalls = [{ id: "tc1", name: "read_file", arguments: { path: "big.json" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "read_file", content: evictedResult }];
+		const log = buildToolLog(toolCalls, toolResults);
+		expect(log).toContain("[Large result saved to scratch/.tool-results/abc-123.txt]");
+		// Should NOT contain the head/tail preview
+		expect(log).not.toContain("=== HEAD ===");
+		expect(log).not.toContain("=== TAIL ===");
 	});
 
 	it("shows (no result) when tool result is missing", () => {

@@ -285,12 +285,18 @@ export function sanitizeHistory(messages: LLMMessage[]): LLMMessage[] {
 	return result;
 }
 
-const TOOL_RESULT_MAX_LENGTH = 200;
+const TOOL_LOG_ARGS_MAX = 150;
+const TOOL_LOG_RESULT_MAX = 500;
+const EVICTED_MARKER = "[Result too large";
 
 /**
  * Build a compact tool activity log to append to the assistant message
  * persisted in history. This lets the LLM reference what tools were called
  * and their results in subsequent turns.
+ *
+ * For results that were evicted to filesystem by the result-evictor (large
+ * tool outputs), the log only includes the file pointer — not the head/tail
+ * preview — so the agent can use read_file to recover the full data.
  */
 export function buildToolLog(toolCalls: LLMToolCall[], toolResults: ToolResult[]): string {
 	const resultMap = new Map<string, string>();
@@ -301,16 +307,41 @@ export function buildToolLog(toolCalls: LLMToolCall[], toolResults: ToolResult[]
 	const entries: string[] = [];
 	for (const tc of toolCalls) {
 		const args = JSON.stringify(tc.arguments);
-		const truncatedArgs =
-			args.length > TOOL_RESULT_MAX_LENGTH ? `${args.slice(0, TOOL_RESULT_MAX_LENGTH)}…` : args;
+		const compactArgs =
+			args.length > TOOL_LOG_ARGS_MAX ? `${args.slice(0, TOOL_LOG_ARGS_MAX)}…` : args;
 
-		let resultText = resultMap.get(tc.id) ?? "(no result)";
-		if (resultText.length > TOOL_RESULT_MAX_LENGTH) {
-			resultText = `${resultText.slice(0, TOOL_RESULT_MAX_LENGTH)}…`;
-		}
+		const rawResult = resultMap.get(tc.id) ?? "(no result)";
+		const resultText = compactResultForLog(rawResult);
 
-		entries.push(`${tc.name}(${truncatedArgs}) → ${resultText}`);
+		entries.push(`${tc.name}(${compactArgs}) → ${resultText}`);
 	}
 
 	return `<tool_log>\n${entries.join("\n")}\n</tool_log>`;
+}
+
+/**
+ * Compact a tool result for the history log.
+ * - Evicted results: extract just the file pointer line
+ * - Small results (≤ TOOL_LOG_RESULT_MAX): keep as-is
+ * - Medium results: truncate with ellipsis
+ */
+function compactResultForLog(result: string): string {
+	// Evicted result — extract the file path pointer, drop the head/tail preview
+	if (result.startsWith(EVICTED_MARKER)) {
+		const pointerMatch = result.match(
+			/\[Full content: (scratch\/\.tool-results\/.+?) — use read_file to access\]/,
+		);
+		if (pointerMatch?.[1]) {
+			return `[Large result saved to ${pointerMatch[1]}]`;
+		}
+		// Fallback: extract just the first line (the size summary)
+		const firstLine = result.split("\n")[0] ?? result;
+		return firstLine;
+	}
+
+	if (result.length <= TOOL_LOG_RESULT_MAX) {
+		return result;
+	}
+
+	return `${result.slice(0, TOOL_LOG_RESULT_MAX)}…`;
 }
