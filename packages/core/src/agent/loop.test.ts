@@ -7,7 +7,7 @@ import type { AgentConfig } from "../config/schema.js";
 import type { GenerateOptions, GenerateResult, LLMProvider } from "../provider/types.js";
 import { ToolRegistry } from "../tools/registry.js";
 import type { InboundMessage } from "../types.js";
-import { AgentLoop, sanitizeHistory } from "./loop.js";
+import { AgentLoop, buildToolLog, sanitizeHistory } from "./loop.js";
 import type { StepCallback, StepEvent } from "./types.js";
 
 const EMPTY_USAGE = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
@@ -445,6 +445,67 @@ describe("AgentLoop", () => {
 			const messages = opts.messages;
 			// system + user "from direct" (no history)
 			expect(messages.length).toBe(2);
+		});
+	});
+
+	describe("tool call history persistence", () => {
+		it("appends tool log to assistant message when tools were called", async () => {
+			const toolCalls = [
+				{ id: "tc1", name: "cron", arguments: { action: "remove", jobId: "abc" } },
+			];
+			const toolResults = [
+				{ toolCallId: "tc1", toolName: "cron", content: "Job removed successfully" },
+			];
+
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				if (callCount === 1) {
+					return makeResult({ toolCalls, toolResults, text: "Done. Removed." });
+				}
+				return makeResult({ text: "Yes, I confirmed it." });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig(),
+			});
+
+			await loop.processMessage(makeInbound("remove the cron"));
+			await loop.processMessage(makeInbound("are you sure?"));
+
+			const opts = getCallOpts(generateSpy, 1);
+			const messages = opts.messages;
+			// system + history(user + assistant-with-tool-log) + user
+			expect(messages.length).toBe(4);
+			const assistantMsg = messages[2];
+			expect(assistantMsg?.content).toContain("Done. Removed.");
+			expect(assistantMsg?.content).toContain("<tool_log>");
+			expect(assistantMsg?.content).toContain("cron(");
+			expect(assistantMsg?.content).toContain("Job removed successfully");
+		});
+
+		it("does not append tool log when no tools were called", async () => {
+			let callCount = 0;
+			const generateSpy = vi.fn<GenerateFn>(async () => {
+				callCount++;
+				return makeResult({ text: `Response ${callCount}` });
+			});
+
+			const loop = new AgentLoop({
+				provider: makeMockProvider(generateSpy),
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig(),
+			});
+
+			await loop.processMessage(makeInbound("hello"));
+			await loop.processMessage(makeInbound("hi again"));
+
+			const opts = getCallOpts(generateSpy, 1);
+			const assistantMsg = opts.messages[2];
+			expect(assistantMsg?.content).toBe("Response 1");
+			expect(assistantMsg?.content).not.toContain("<tool_log>");
 		});
 	});
 
@@ -980,5 +1041,55 @@ describe("sanitizeHistory", () => {
 		expect(result[1]).toEqual({ role: "assistant", content: "will call", toolCallId: "tc-2" });
 		expect(result[2]?.role).toBe("tool");
 		expect(result[2]?.toolCallId).toBe("tc-2");
+	});
+});
+
+describe("buildToolLog", () => {
+	it("creates a tool log with tool name, args, and result", () => {
+		const toolCalls = [{ id: "tc1", name: "cron", arguments: { action: "remove", jobId: "abc" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "cron", content: "Job removed" }];
+		const log = buildToolLog(toolCalls, toolResults);
+		expect(log).toContain("<tool_log>");
+		expect(log).toContain("</tool_log>");
+		expect(log).toContain("cron(");
+		expect(log).toContain('"action":"remove"');
+		expect(log).toContain("→ Job removed");
+	});
+
+	it("handles multiple tool calls", () => {
+		const toolCalls = [
+			{ id: "tc1", name: "read_file", arguments: { path: "test.txt" } },
+			{ id: "tc2", name: "write_file", arguments: { path: "out.txt", content: "hello" } },
+		];
+		const toolResults = [
+			{ toolCallId: "tc1", toolName: "read_file", content: "file contents" },
+			{ toolCallId: "tc2", toolName: "write_file", content: "Written successfully" },
+		];
+		const log = buildToolLog(toolCalls, toolResults);
+		expect(log).toContain("read_file(");
+		expect(log).toContain("→ file contents");
+		expect(log).toContain("write_file(");
+		expect(log).toContain("→ Written successfully");
+	});
+
+	it("truncates long tool results", () => {
+		const longResult = "x".repeat(500);
+		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "exec", content: longResult }];
+		const log = buildToolLog(toolCalls, toolResults);
+		expect(log).not.toContain(longResult);
+		expect(log).toContain("…");
+	});
+
+	it("shows (no result) when tool result is missing", () => {
+		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
+		const log = buildToolLog(toolCalls, []);
+		expect(log).toContain("(no result)");
+	});
+
+	it("returns empty entries with no tool calls", () => {
+		const log = buildToolLog([], []);
+		expect(log).toContain("<tool_log>");
+		expect(log).toContain("</tool_log>");
 	});
 });

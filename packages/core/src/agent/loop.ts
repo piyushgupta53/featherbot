@@ -3,7 +3,7 @@ import type { LLMMessage } from "../provider/types.js";
 import { initDatabase } from "../session/database.js";
 import { SessionStore } from "../session/session-store.js";
 import { SqliteHistory } from "../session/sqlite-history.js";
-import type { InboundMessage, SessionKey } from "../types.js";
+import type { InboundMessage, LLMToolCall, SessionKey, ToolResult } from "../types.js";
 import { ContextBuilder } from "./context-builder.js";
 import type { ContextBuilderResult, SessionContext } from "./context-builder.js";
 import { InMemoryHistory } from "./history.js";
@@ -182,7 +182,11 @@ export class AgentLoop {
 		if (!skipHistory) {
 			history.add({ role: "user", content: userContent });
 			if (result.text) {
-				history.add({ role: "assistant", content: result.text });
+				const assistantContent =
+					result.toolCalls.length > 0
+						? `${result.text}\n\n${buildToolLog(result.toolCalls, result.toolResults)}`
+						: result.text;
+				history.add({ role: "assistant", content: assistantContent });
 			}
 
 			if (this.sessionStore !== undefined) {
@@ -279,4 +283,34 @@ export function sanitizeHistory(messages: LLMMessage[]): LLMMessage[] {
 	}
 
 	return result;
+}
+
+const TOOL_RESULT_MAX_LENGTH = 200;
+
+/**
+ * Build a compact tool activity log to append to the assistant message
+ * persisted in history. This lets the LLM reference what tools were called
+ * and their results in subsequent turns.
+ */
+export function buildToolLog(toolCalls: LLMToolCall[], toolResults: ToolResult[]): string {
+	const resultMap = new Map<string, string>();
+	for (const tr of toolResults) {
+		resultMap.set(tr.toolCallId, tr.content);
+	}
+
+	const entries: string[] = [];
+	for (const tc of toolCalls) {
+		const args = JSON.stringify(tc.arguments);
+		const truncatedArgs =
+			args.length > TOOL_RESULT_MAX_LENGTH ? `${args.slice(0, TOOL_RESULT_MAX_LENGTH)}…` : args;
+
+		let resultText = resultMap.get(tc.id) ?? "(no result)";
+		if (resultText.length > TOOL_RESULT_MAX_LENGTH) {
+			resultText = `${resultText.slice(0, TOOL_RESULT_MAX_LENGTH)}…`;
+		}
+
+		entries.push(`${tc.name}(${truncatedArgs}) → ${resultText}`);
+	}
+
+	return `<tool_log>\n${entries.join("\n")}\n</tool_log>`;
 }
