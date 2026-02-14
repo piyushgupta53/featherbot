@@ -40,7 +40,9 @@ Example: `list_dir({ path: "." })`
 
 ## cron
 
-Manage scheduled tasks. The `action` parameter determines the operation.
+Manage scheduled tasks. When a job fires, the `message` is processed through the **full agent loop with all tools available** (web search, web fetch, exec, etc.) and the result is automatically sent to the user's channel. This is fully automated — no manual intervention needed.
+
+The `action` parameter determines the operation.
 
 **Actions:**
 - `add` — Create a new scheduled job. Requires: `name`, `message`, and exactly one of `cronExpr`, `everySeconds`, `at`, or `relativeMinutes`.
