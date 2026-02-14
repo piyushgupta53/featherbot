@@ -6,7 +6,7 @@ import type { Tool } from "./types.js";
 export class CronTool implements Tool {
 	readonly name = "cron";
 	readonly description =
-		"Manage scheduled tasks. Use action 'add' with name, message, and a schedule (cronExpr, everySeconds, or at) to create a job. Use 'list' to view jobs, 'remove' with jobId to delete. Listing does NOT create — you must use 'add' to create.";
+		"Manage scheduled tasks. When a job fires, the 'message' is processed through the full agent loop with all tools available (web search, web fetch, etc.) and the result is automatically sent to the user — no manual intervention needed. Use action 'add' with name, message, and a schedule (cronExpr, everySeconds, or at) to create a job. Use 'list' to view jobs, 'remove' with jobId to delete. Listing does NOT create — you must use 'add' to create.";
 	readonly parameters = z.object({
 		action: z
 			.enum(["add", "list", "remove", "enable", "disable"])
