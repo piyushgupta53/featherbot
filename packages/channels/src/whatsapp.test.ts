@@ -26,6 +26,9 @@ vi.mock("@whiskeysockets/baileys", () => ({
 			on: (event: string, handler: Handler) => {
 				evHandlers.set(event, handler);
 			},
+			removeAllListeners: (event: string) => {
+				evHandlers.delete(event);
+			},
 		},
 		sendMessage: mockSendMessage,
 		end: mockEnd,

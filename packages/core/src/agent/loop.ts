@@ -51,6 +51,12 @@ export class AgentLoop {
 		}
 	}
 
+	close(): void {
+		if (this.db) {
+			this.db.close();
+		}
+	}
+
 	getHistory(sessionKey: SessionKey): LLMMessage[] {
 		const history = this.sessions.get(sessionKey);
 		return history ? history.getMessages() : [];

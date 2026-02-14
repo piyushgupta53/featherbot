@@ -22,6 +22,8 @@ export class WhatsAppChannel extends BaseChannel {
 	private sock: WASocket | undefined;
 	private readonly authDir: string;
 	private reconnecting = false;
+	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private stopped = false;
 
 	constructor(options: WhatsAppChannelOptions) {
 		super(options);
@@ -29,6 +31,7 @@ export class WhatsAppChannel extends BaseChannel {
 	}
 
 	async start(): Promise<void> {
+		this.stopped = false;
 		await this.connect();
 	}
 
@@ -62,10 +65,11 @@ export class WhatsAppChannel extends BaseChannel {
 				if (isLoggedOut) {
 					console.log("WhatsApp: logged out, not reconnecting");
 					this.sock = undefined;
-				} else if (!this.reconnecting) {
+				} else if (!this.reconnecting && !this.stopped) {
 					this.reconnecting = true;
 					console.log("WhatsApp: connection closed, reconnecting in 5s...");
-					setTimeout(() => {
+					this.reconnectTimer = setTimeout(() => {
+						this.reconnectTimer = null;
 						this.connect().catch((err) => {
 							console.error("WhatsApp reconnect error:", err);
 							this.reconnecting = false;
@@ -161,7 +165,15 @@ export class WhatsAppChannel extends BaseChannel {
 	}
 
 	async stop(): Promise<void> {
+		this.stopped = true;
+		if (this.reconnectTimer !== null) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = null;
+		}
 		if (this.sock !== undefined) {
+			this.sock.ev.removeAllListeners("creds.update");
+			this.sock.ev.removeAllListeners("connection.update");
+			this.sock.ev.removeAllListeners("messages.upsert");
 			this.sock.end(undefined);
 			this.sock = undefined;
 		}

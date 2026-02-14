@@ -168,6 +168,9 @@ export class MemoryExtractor {
 		// Collect sessions that have pending timers (not yet extracted)
 		const pendingSessions = [...this.timers.keys()];
 		this.timers.clear();
+		this.lastExtraction.clear();
+		this.firstSeen.clear();
+		this.running.clear();
 
 		// Force-extract all pending sessions with a timeout
 		if (pendingSessions.length > 0) {

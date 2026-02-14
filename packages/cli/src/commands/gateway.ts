@@ -389,6 +389,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		onStop: async () => {
 			await memoryExtractor.dispose();
 			sessionQueue.dispose();
+			agentLoop.close();
 		},
 	});
 }
