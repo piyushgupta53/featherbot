@@ -191,6 +191,11 @@ export class VercelLLMProvider implements LLMProvider {
 
 			const messages = mapMessages(options.messages, modelString);
 
+			const toolNames = aiTools ? Object.keys(aiTools).join(", ") : "none";
+			console.log(
+				`[provider] generateText called: model=${modelString}, messages=${messages.length}, tools=${toolNames}, maxSteps=${options.maxSteps}`,
+			);
+
 			const result = await withRetry(() =>
 				generateText({
 					model,
@@ -221,6 +226,25 @@ export class VercelLLMProvider implements LLMProvider {
 					}>,
 			);
 
+			if (allToolCalls.length > 0) {
+				console.log(
+					`[provider] tool calls executed: ${allToolCalls.map((t) => t.toolName).join(", ")}`,
+				);
+			}
+			if (allToolResults.length > 0) {
+				const resultPreviews = allToolResults.map((t) => {
+					const content = String(t.output);
+					const preview = content.length > 150 ? `${content.slice(0, 150)}...` : content;
+					return `${t.toolName}: ${preview}`;
+				});
+				console.log(`[provider] tool results received: ${resultPreviews.join(" | ")}`);
+			}
+
+			const textPreview =
+				result.text.length > 200 ? `${result.text.slice(0, 200)}...` : result.text;
+			console.log(`[provider] final text (${result.text.length} chars): ${textPreview}`);
+			console.log(`[provider] finishReason: ${result.finishReason}, steps: ${result.steps.length}`);
+
 			return {
 				text: result.text,
 				toolCalls: mapToolCalls(allToolCalls),
@@ -230,6 +254,7 @@ export class VercelLLMProvider implements LLMProvider {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
+			console.log(`[provider] ERROR: ${message}`);
 			return {
 				text: `[LLM Error] ${message}`,
 				toolCalls: [],

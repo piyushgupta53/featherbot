@@ -359,7 +359,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 			? new Transcriber(config.transcription)
 			: undefined;
 
-	const sessionQueue = new SessionQueue(agentLoop, { debounceMs: 2000 });
+	const sessionQueue = new SessionQueue(agentLoop, { debounceMs: 0 });
 	const adapter = new BusAdapter({ bus, agentLoop: sessionQueue });
 	const channelManager = new ChannelManager({ bus });
 

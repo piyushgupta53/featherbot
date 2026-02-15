@@ -7,7 +7,13 @@ import type { AgentConfig } from "../config/schema.js";
 import type { GenerateOptions, GenerateResult, LLMProvider } from "../provider/types.js";
 import { ToolRegistry } from "../tools/registry.js";
 import type { InboundMessage } from "../types.js";
-import { AgentLoop, buildToolLog, sanitizeHistory } from "./loop.js";
+import {
+	AgentLoop,
+	buildToolLog,
+	ensureTextResponse,
+	sanitizeHistory,
+	stripToolLog,
+} from "./loop.js";
 import type { StepCallback, StepEvent } from "./types.js";
 
 const EMPTY_USAGE = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
@@ -1120,5 +1126,88 @@ describe("buildToolLog", () => {
 	it("returns empty entries with no tool calls", () => {
 		const log = buildToolLog([], []);
 		expect(log).toContain("[Tool activity:");
+	});
+});
+
+describe("stripToolLog", () => {
+	it("strips legacy tool_log XML format", () => {
+		const text = "Hello <tool_log><tool>exec</tool><result>done</result></tool_log> world";
+		expect(stripToolLog(text)).toBe("Hello  world");
+	});
+
+	it("strips tool_call XML format", () => {
+		const text = "Starting <tool_call><tool_name>exec</tool_name></tool_call> now";
+		expect(stripToolLog(text)).toBe("Starting  now");
+	});
+
+	it("strips double bracket format", () => {
+		const text = 'Running [[Tool name="exec"]] command';
+		expect(stripToolLog(text)).toBe("Running  command");
+	});
+
+	it("strips Tool activity bracket format", () => {
+		const text = "Done [Tool activity: exec({command: ls}) → result] thanks";
+		expect(stripToolLog(text)).toBe("Done  thanks");
+	});
+
+	it("collapses multiple newlines", () => {
+		const text = "Hello\n\n\n\nworld";
+		expect(stripToolLog(text)).toBe("Hello\n\nworld");
+	});
+
+	it("trims whitespace", () => {
+		const text = "  Hello   ";
+		expect(stripToolLog(text)).toBe("Hello");
+	});
+
+	it("returns original text when no patterns match", () => {
+		const text = "Just a normal message";
+		expect(stripToolLog(text)).toBe("Just a normal message");
+	});
+});
+
+describe("ensureTextResponse", () => {
+	it("returns original text when not empty", () => {
+		const result = ensureTextResponse("Hello world", [], []);
+		expect(result).toBe("Hello world");
+	});
+
+	it("returns text with whitespace only as empty", () => {
+		const result = ensureTextResponse("   ", [], []);
+		expect(result).toBe("");
+	});
+
+	it("generates fallback when text is empty but tools executed", () => {
+		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "exec", content: "file1.txt" }];
+		const result = ensureTextResponse("", toolCalls, toolResults);
+		expect(result).toContain("exec:");
+		expect(result).toContain("file1.txt");
+	});
+
+	it("truncates long results in fallback", () => {
+		const longContent = "x".repeat(150);
+		const toolCalls = [{ id: "tc1", name: "read_file", arguments: { path: "big.txt" } }];
+		const toolResults = [{ toolCallId: "tc1", toolName: "read_file", content: longContent }];
+		const result = ensureTextResponse("", toolCalls, toolResults);
+		expect(result).toContain("...");
+		expect(result).not.toContain(longContent);
+	});
+
+	it("shows tool names when tool calls executed but no results", () => {
+		const toolCalls = [{ id: "tc1", name: "exec", arguments: { command: "ls" } }];
+		const toolResults: { toolCallId: string; toolName: string; content: string }[] = [];
+		const result = ensureTextResponse("", toolCalls, toolResults);
+		expect(result).toContain("Executed 1 tool(s): exec");
+	});
+
+	it("returns text as-is when no tools executed", () => {
+		const result = ensureTextResponse("Just a message", [], []);
+		expect(result).toBe("Just a message");
+	});
+
+	it("returns empty string when nothing provided", () => {
+		const result = ensureTextResponse("", [], []);
+		expect(result).toBe("");
 	});
 });

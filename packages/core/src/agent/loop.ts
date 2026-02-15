@@ -181,11 +181,12 @@ export class AgentLoop {
 
 		if (!skipHistory) {
 			history.add({ role: "user", content: userContent });
-			if (result.text) {
+			const finalText = ensureTextResponse(result.text, result.toolCalls, result.toolResults);
+			if (finalText) {
 				const assistantContent =
 					result.toolCalls.length > 0
-						? `${result.text}\n\n${buildToolLog(result.toolCalls, result.toolResults)}`
-						: result.text;
+						? `${finalText}\n\n${buildToolLog(result.toolCalls, result.toolResults)}`
+						: finalText;
 				history.add({ role: "assistant", content: assistantContent });
 			}
 
@@ -203,7 +204,9 @@ export class AgentLoop {
 		});
 
 		return {
-			text: stripToolLog(result.text),
+			text: stripToolLog(
+				ensureTextResponse(result.text, result.toolCalls, result.toolResults) ?? "",
+			),
 			usage: result.usage,
 			steps,
 			finishReason: result.finishReason,
@@ -350,11 +353,49 @@ function compactResultForLog(result: string): string {
  * Strip any tool activity artifacts the LLM may have echoed back
  * in its response text — both legacy XML format and new bracket format.
  */
-function stripToolLog(text: string): string {
+export function stripToolLog(text: string): string {
 	return text
 		.replace(/<tool_log>[\s\S]*?<\/tool_log>/g, "")
 		.replace(/<tool_log>[\s\S]*?<\/minimax:tool_call>/g, "")
 		.replace(/<tool_log>[\s\S]*$/g, "")
+		.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
+		.replace(/\[\[Tool[^\]]*\]\]/g, "")
 		.replace(/\[Tool activity:[^\]]*\]/g, "")
+		.replace(/\n{3,}/g, "\n\n")
 		.trim();
+}
+
+/**
+ * Ensure we always return a text response to the user.
+ * If text is empty but tool calls/results exist, generate a fallback.
+ */
+export function ensureTextResponse(
+	text: string | undefined,
+	toolCalls: LLMToolCall[],
+	toolResults: ToolResult[],
+): string | undefined {
+	const textContent = text?.trim() ?? "";
+	if (textContent.length > 0) {
+		return text;
+	}
+
+	if (toolCalls.length > 0) {
+		if (toolResults.length > 0) {
+			const parts: string[] = [];
+			for (const tc of toolCalls) {
+				const result = toolResults.find((r) => r.toolCallId === tc.id);
+				if (result) {
+					const preview =
+						result.content.length > 100 ? `${result.content.slice(0, 100)}...` : result.content;
+					parts.push(`${tc.name}: ${preview}`);
+				} else {
+					parts.push(`${tc.name}: (no result)`);
+				}
+			}
+			return `Executed: ${parts.join(" | ")}`;
+		}
+		return `Executed ${toolCalls.length} tool(s): ${toolCalls.map((t) => t.name).join(", ")}`;
+	}
+
+	return textContent || "";
 }
