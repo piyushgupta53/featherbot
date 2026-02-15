@@ -203,7 +203,7 @@ export class AgentLoop {
 		});
 
 		return {
-			text: result.text,
+			text: stripToolLog(result.text),
 			usage: result.usage,
 			steps,
 			finishReason: result.finishReason,
@@ -344,4 +344,12 @@ function compactResultForLog(result: string): string {
 	}
 
 	return `${result.slice(0, TOOL_LOG_RESULT_MAX)}…`;
+}
+
+/**
+ * Strip any `<tool_log>…</tool_log>` blocks the LLM may have echoed back
+ * in its response text (it sees them in history and mimics the pattern).
+ */
+function stripToolLog(text: string): string {
+	return text.replace(/<tool_log>[\s\S]*?<\/tool_log>/g, "").trim();
 }
