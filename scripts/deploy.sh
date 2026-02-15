@@ -17,10 +17,13 @@ git pull
 echo "[2/5] Installing dependencies..."
 pnpm install
 
-echo "[3/5] Building..."
+echo "[3/5] Fixing build for Pi (remove DTS to save memory)..."
+find packages -name "package.json" -exec sed -i 's/--dts//g' {} \;
+
+echo "[4/5] Building..."
 pnpm build
 
-echo "[4/5] Syncing workspace files..."
+echo "[5/5] Syncing workspace files..."
 for file in "${SYNC_FILES[@]}"; do
   if [ -f "workspace/$file" ]; then
     cp "workspace/$file" "$WORKSPACE_DIR/$file"
@@ -28,7 +31,7 @@ for file in "${SYNC_FILES[@]}"; do
   fi
 done
 
-echo "[5/5] Restarting service..."
+echo "[6/6] Restarting service..."
 sudo systemctl restart "$SERVICE_NAME"
 
 echo ""
