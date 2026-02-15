@@ -261,7 +261,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					systemPrompt: prompt,
 					skipHistory: true,
 				});
-				if (!result.text || result.text.startsWith("SKIP")) return;
+				if (!result.text || result.text.trim().endsWith("SKIP")) return;
 
 				const now = new Date();
 
