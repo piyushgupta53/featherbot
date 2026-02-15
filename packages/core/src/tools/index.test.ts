@@ -99,13 +99,13 @@ describe("createToolRegistry", () => {
 
 	it("read_file returns error for missing file", async () => {
 		const registry = createToolRegistry(makeConfig());
-		const result = await registry.execute("read_file", { path: "/nonexistent-file-abc123.txt" });
+		const result = await registry.execute("read_file", { path: "nonexistent-file-abc123.txt" });
 		expect(result).toContain("File not found");
 	});
 
 	it("list_dir returns error for missing directory", async () => {
 		const registry = createToolRegistry(makeConfig());
-		const result = await registry.execute("list_dir", { path: "/nonexistent-dir-abc123" });
+		const result = await registry.execute("list_dir", { path: "nonexistent-dir-abc123" });
 		expect(result).toContain("not found");
 	});
 });

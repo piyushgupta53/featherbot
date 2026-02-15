@@ -5,8 +5,9 @@
 - **data/** — Persistent outputs (scripts, reports, exports, downloads). Files here are kept across restarts.
 - **scratch/** — Temporary work area (package installs, builds, intermediate files). Auto-cleaned on startup (files older than 7 days are removed). This is the default working directory for `exec`.
 - **memory/** — Memory files managed automatically. Do not edit directly.
+- **skills/** — Custom skills you create (SKILL.md plugins).
 
-Do not create files in the workspace root — it is reserved for bootstrap configuration files.
+**All file operations are sandboxed to this workspace directory.** Paths are relative to the workspace root. You cannot read, write, or execute outside the workspace. Do not create files in the workspace root — it is reserved for bootstrap configuration files.
 
 ## exec
 

@@ -76,7 +76,7 @@ export const ToolConfigSchema = z.object({
 		})
 		.default({}),
 	exec: ExecToolConfigSchema.default({}),
-	restrictToWorkspace: z.boolean().default(false),
+	restrictToWorkspace: z.boolean().default(true),
 	resultEvictionThreshold: z.number().int().positive().default(20000),
 });
 

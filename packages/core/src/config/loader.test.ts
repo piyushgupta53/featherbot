@@ -34,7 +34,7 @@ describe("loadConfig", () => {
 		]);
 		expect(config.channels.telegram.enabled).toBe(false);
 		expect(config.providers.anthropic.apiKey).toBe("");
-		expect(config.tools.restrictToWorkspace).toBe(false);
+		expect(config.tools.restrictToWorkspace).toBe(true);
 		expect(config.session.dbPath).toBe("~/.featherbot/sessions.db");
 		expect(config.session.maxMessages).toBe(50);
 	});

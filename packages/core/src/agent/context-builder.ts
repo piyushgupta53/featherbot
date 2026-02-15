@@ -109,7 +109,15 @@ export class ContextBuilder {
 		lines.push("- data/ — persistent outputs (scripts, exports, saved files)");
 		lines.push("- scratch/ — temp work area, auto-cleaned. Default cwd for exec.");
 		lines.push("- memory/ — memory files (managed automatically)");
+		lines.push("- skills/ — custom skills (SKILL.md plugins)");
 		lines.push("- Do not create files in workspace root.");
+		lines.push("");
+		lines.push(
+			"IMPORTANT: All file operations (read, write, edit, list, exec) are restricted to this workspace directory.",
+		);
+		lines.push(
+			"All paths are relative to the workspace root. Do NOT attempt to access files outside the workspace.",
+		);
 		lines.push("");
 		lines.push("IMPORTANT: Never include <tool_log> tags in your responses.");
 		lines.push(
