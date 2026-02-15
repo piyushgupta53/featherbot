@@ -101,8 +101,12 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					"",
 					job.payload.message,
 				].join("\n");
+				const sessionKey =
+					job.payload.channel && job.payload.chatId
+						? `${job.payload.channel}:${job.payload.chatId}`
+						: `cron:${job.id}`;
 				const result = await agentLoop.processDirect(cronPrompt, {
-					sessionKey: `cron:${job.id}`,
+					sessionKey,
 				});
 				if (job.payload.channel && job.payload.chatId && result.text) {
 					await bus.publish({
