@@ -110,6 +110,11 @@ export class ContextBuilder {
 		lines.push("- scratch/ — temp work area, auto-cleaned. Default cwd for exec.");
 		lines.push("- memory/ — memory files (managed automatically)");
 		lines.push("- Do not create files in workspace root.");
+		lines.push("");
+		lines.push("IMPORTANT: Never include <tool_log> tags in your responses.");
+		lines.push(
+			"When you use tools, describe the results in plain text. The system logs tool calls automatically — you must not echo them.",
+		);
 		return lines.join("\n");
 	}
 
