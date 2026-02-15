@@ -347,9 +347,14 @@ function compactResultForLog(result: string): string {
 }
 
 /**
- * Strip any `<tool_log>…</tool_log>` blocks the LLM may have echoed back
- * in its response text (it sees them in history and mimics the pattern).
+ * Strip any `<tool_log>…</tool_log>` blocks and other LLM-echoed XML
+ * artifacts from the response text. The LLM sees tool_log in history
+ * and sometimes mimics the pattern, or emits raw tool-call XML.
  */
 function stripToolLog(text: string): string {
-	return text.replace(/<tool_log>[\s\S]*?<\/tool_log>/g, "").trim();
+	return text
+		.replace(/<tool_log>[\s\S]*?<\/tool_log>/g, "")
+		.replace(/<tool_log>[\s\S]*?<\/minimax:tool_call>/g, "")
+		.replace(/<tool_log>[\s\S]*$/g, "")
+		.trim();
 }

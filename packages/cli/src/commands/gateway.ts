@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { MessageBus } from "@featherbot/bus";
 import {
 	BusAdapter,
@@ -85,6 +86,18 @@ function resolveHome(path: string): string {
 	return path.startsWith("~") ? join(homedir(), path.slice(1)) : resolve(path);
 }
 
+function resolveBuiltinSkillsDir(): string {
+	const currentDir = dirname(fileURLToPath(import.meta.url));
+	const candidates = [
+		resolve(currentDir, "..", "..", "..", "..", "skills"), // from src/commands/
+		resolve(currentDir, "..", "..", "..", "skills"), // from dist/
+	];
+	for (const c of candidates) {
+		if (existsSync(c)) return c;
+	}
+	return candidates[0] as string;
+}
+
 export function createGateway(config: FeatherBotConfig): Gateway {
 	const bus = new MessageBus();
 	const toolRegistry = createToolRegistry(config);
@@ -162,7 +175,10 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 	};
 	maybeSetMemoryTimezone(userTimezone);
 	toolRegistry.register(new RecallRecentTool({ memoryStore }));
-	const skillsLoader = createSkillsLoader({ workspacePath: workspace });
+	const skillsLoader = createSkillsLoader({
+		workspacePath: workspace,
+		builtinSkillsDir: resolveBuiltinSkillsDir(),
+	});
 
 	const agentLoop = createAgentLoop(config, {
 		toolRegistry,

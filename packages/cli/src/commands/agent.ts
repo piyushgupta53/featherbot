@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { MessageBus } from "@featherbot/bus";
 import { BusAdapter, ChannelManager, TerminalChannel } from "@featherbot/channels";
 import {
@@ -27,6 +28,18 @@ const PROACTIVE_HISTORY_MAX = 20; // keep last 20 entries
 
 function resolveHome(path: string): string {
 	return path.startsWith("~") ? join(homedir(), path.slice(1)) : resolve(path);
+}
+
+function resolveBuiltinSkillsDir(): string {
+	const currentDir = dirname(fileURLToPath(import.meta.url));
+	const candidates = [
+		resolve(currentDir, "..", "..", "..", "..", "skills"), // from src/commands/
+		resolve(currentDir, "..", "..", "..", "skills"), // from dist/
+	];
+	for (const c of candidates) {
+		if (existsSync(c)) return c;
+	}
+	return candidates[0] as string;
 }
 
 interface HeartbeatState {
@@ -92,7 +105,10 @@ function createConfiguredLoop(config: ReturnType<typeof loadConfig>) {
 	};
 	refreshUserTimezone();
 	const memoryStore = createMemoryStore(workspace, userTimezone);
-	const skillsLoader = createSkillsLoader({ workspacePath: workspace });
+	const skillsLoader = createSkillsLoader({
+		workspacePath: workspace,
+		builtinSkillsDir: resolveBuiltinSkillsDir(),
+	});
 	return createAgentLoop(config, {
 		workspacePath: workspace,
 		memoryStore,
@@ -134,7 +150,10 @@ export async function runRepl(): Promise<void> {
 	};
 	maybeSetMemoryTimezone(userTimezone);
 	toolRegistry.register(new RecallRecentTool({ memoryStore }));
-	const skillsLoader = createSkillsLoader({ workspacePath: workspace });
+	const skillsLoader = createSkillsLoader({
+		workspacePath: workspace,
+		builtinSkillsDir: resolveBuiltinSkillsDir(),
+	});
 	const agentLoop = createAgentLoop(config, {
 		toolRegistry,
 		workspacePath: workspace,
