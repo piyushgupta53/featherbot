@@ -95,7 +95,13 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 		cronService = new CronService({
 			storePath: resolveHome(config.cron.storePath),
 			onJobFire: async (job) => {
-				const result = await agentLoop.processDirect(job.payload.message, {
+				const cronPrompt = [
+					`A scheduled job "${job.name}" just fired.`,
+					"Deliver the following message to the user as-is. Do not editorialize or add commentary — just relay it clearly.",
+					"",
+					job.payload.message,
+				].join("\n");
+				const result = await agentLoop.processDirect(cronPrompt, {
 					sessionKey: `cron:${job.id}`,
 				});
 				if (job.payload.channel && job.payload.chatId && result.text) {
