@@ -10,7 +10,7 @@ export function buildSubagentResultPrompt(state: SubagentState): string {
 			`Original task: ${state.task}`,
 			"",
 			"Raw result:",
-			state.result ?? "(no result)",
+			state.result?.trim() || "(no result)",
 			"",
 			"Instructions:",
 			"- Reference the original task naturally (e.g. 'About that research you asked about...')",

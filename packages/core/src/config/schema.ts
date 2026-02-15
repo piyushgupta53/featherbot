@@ -10,6 +10,7 @@ export const AgentConfigSchema = z.object({
 	maxTokens: z.number().int().positive().default(8192),
 	temperature: z.number().min(0).max(2).default(0.7),
 	maxToolIterations: z.number().int().positive().default(20),
+	messageTimeoutMs: z.number().int().positive().default(300000),
 	bootstrapFiles: z.array(z.string()).default(DEFAULT_BOOTSTRAP_FILES),
 });
 

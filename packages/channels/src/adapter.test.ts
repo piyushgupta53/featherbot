@@ -209,6 +209,66 @@ describe("BusAdapter", () => {
 		adapter.stop();
 	});
 
+	it("substitutes fallback when agent returns empty text", async () => {
+		bus = new MessageBus();
+		const agent = makeMockAgent({ text: "" });
+		const adapter = new BusAdapter({ bus, agentLoop: agent });
+		adapter.start();
+
+		const outboundEvents: OutboundMessageEvent[] = [];
+		bus.subscribe("message:outbound", (event) => {
+			outboundEvents.push(event);
+		});
+
+		const inbound = createInboundMessage({
+			channel: "terminal",
+			senderId: "user-1",
+			chatId: "chat-1",
+			content: "Hello",
+			media: [],
+			metadata: {},
+		});
+
+		await bus.publish({ type: "message:inbound", message: inbound, timestamp: new Date() });
+
+		expect(outboundEvents).toHaveLength(1);
+		expect(outboundEvents[0]?.message.content).toBe(
+			"I couldn't generate a response. Please try again.",
+		);
+
+		adapter.stop();
+	});
+
+	it("substitutes fallback when agent returns whitespace-only text", async () => {
+		bus = new MessageBus();
+		const agent = makeMockAgent({ text: "   \n  " });
+		const adapter = new BusAdapter({ bus, agentLoop: agent });
+		adapter.start();
+
+		const outboundEvents: OutboundMessageEvent[] = [];
+		bus.subscribe("message:outbound", (event) => {
+			outboundEvents.push(event);
+		});
+
+		const inbound = createInboundMessage({
+			channel: "terminal",
+			senderId: "user-1",
+			chatId: "chat-1",
+			content: "Hello",
+			media: [],
+			metadata: {},
+		});
+
+		await bus.publish({ type: "message:inbound", message: inbound, timestamp: new Date() });
+
+		expect(outboundEvents).toHaveLength(1);
+		expect(outboundEvents[0]?.message.content).toBe(
+			"I couldn't generate a response. Please try again.",
+		);
+
+		adapter.stop();
+	});
+
 	it("stop() unsubscribes from bus", async () => {
 		bus = new MessageBus();
 		const agent = makeMockAgent();

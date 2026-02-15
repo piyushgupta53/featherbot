@@ -214,6 +214,87 @@ describe("SubagentManager", () => {
 		expect(manager.getState("nonexistent-id")).toBeUndefined();
 	});
 
+	it("does not crash when onComplete throws on success path", async () => {
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const onComplete = vi.fn().mockRejectedValue(new Error("publish failed"));
+		const manager = new SubagentManager(makeMockProvider(), makeConfig(), onComplete);
+
+		manager.spawn({
+			task: "test task",
+			originChannel: "telegram",
+			originChatId: "123",
+		});
+
+		// Should log the error, not crash with unhandled rejection
+		await vi.waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[subagent] onComplete failed"),
+				expect.stringContaining("publish failed"),
+			);
+		});
+
+		expect(onComplete).toHaveBeenCalledOnce();
+		consoleSpy.mockRestore();
+	});
+
+	it("does not crash when onComplete throws on failure path", async () => {
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const provider = makeMockProvider(async () => {
+			throw new Error("LLM exploded");
+		});
+		const onComplete = vi.fn().mockRejectedValue(new Error("bus down"));
+		const manager = new SubagentManager(provider, makeConfig(), onComplete);
+
+		manager.spawn({
+			task: "fail task",
+			originChannel: "telegram",
+			originChatId: "123",
+		});
+
+		await vi.waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[subagent] onComplete failed"),
+				expect.stringContaining("bus down"),
+			);
+		});
+
+		expect(onComplete).toHaveBeenCalledOnce();
+		consoleSpy.mockRestore();
+	});
+
+	it("stores concatenated tool results when result.text is empty", async () => {
+		const completedStates: SubagentState[] = [];
+		const provider = makeMockProvider(async () =>
+			makeResult({
+				text: "",
+				toolResults: [
+					{ toolCallId: "tc1", toolName: "web_search", content: "Found: cricket score 250/3" },
+					{ toolCallId: "tc2", toolName: "web_fetch", content: "Detailed page content" },
+				],
+				toolCalls: [
+					{ id: "tc1", name: "web_search", arguments: { query: "cricket" } },
+					{ id: "tc2", name: "web_fetch", arguments: { url: "https://example.com" } },
+				],
+			}),
+		);
+		const manager = new SubagentManager(provider, makeConfig(), (state) => {
+			completedStates.push(state);
+		});
+
+		manager.spawn({
+			task: "get cricket score",
+			originChannel: "telegram",
+			originChatId: "123",
+		});
+
+		await vi.waitFor(() => {
+			expect(completedStates.length).toBe(1);
+		});
+
+		expect(completedStates[0]?.result).toContain("web_search: Found: cricket score 250/3");
+		expect(completedStates[0]?.result).toContain("web_fetch: Detailed page content");
+	});
+
 	it("sub-agent tool registry does NOT include spawn, subagent_status, or cron tools", () => {
 		const generateSpy = vi.fn(async (opts: GenerateOptions) => {
 			// Check that tools don't include restricted tools

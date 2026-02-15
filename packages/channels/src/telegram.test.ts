@@ -7,6 +7,7 @@ import { TelegramChannel } from "./telegram.js";
 type Handler = (ctx: any) => Promise<void>;
 
 const mockSendMessage = vi.fn();
+const mockSendChatAction = vi.fn().mockResolvedValue(true);
 const mockStart = vi.fn();
 const mockStop = vi.fn();
 const handlers: Map<string, Handler> = new Map();
@@ -26,6 +27,7 @@ vi.mock("grammy", () => ({
 		stop: mockStop,
 		api: {
 			sendMessage: mockSendMessage,
+			sendChatAction: mockSendChatAction,
 		},
 	})),
 }));
@@ -86,6 +88,7 @@ describe("TelegramChannel", () => {
 		bus = new MessageBus();
 		handlers.clear();
 		mockSendMessage.mockReset();
+		mockSendChatAction.mockReset().mockResolvedValue(true);
 		mockStart.mockReset();
 		mockStop.mockReset();
 		mockFetch.mockReset();
@@ -297,6 +300,66 @@ describe("TelegramChannel", () => {
 
 		expect(consoleSpy).toHaveBeenCalledWith("Telegram send error:", expect.any(Error));
 		consoleSpy.mockRestore();
+	});
+
+	it("skips sending when content is empty", async () => {
+		channel = new TelegramChannel({ bus, token: "test-token" });
+		const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		await channel.start();
+
+		await channel.send({
+			channel: "telegram",
+			chatId: "456",
+			content: "",
+			replyTo: null,
+			media: [],
+			metadata: {},
+			messageId: "msg-1",
+			inReplyToMessageId: null,
+		});
+
+		expect(mockSendMessage).not.toHaveBeenCalled();
+		expect(consoleSpy).toHaveBeenCalledWith("Telegram send skipped: empty content for chat", "456");
+		consoleSpy.mockRestore();
+	});
+
+	it("sends typing indicator when inbound message is published", async () => {
+		channel = new TelegramChannel({ bus, token: "test-token" });
+
+		await channel.start();
+
+		const handler = handlers.get("message:text");
+		await handler?.(makeTextCtx(123, 456, "Hello bot"));
+
+		expect(mockSendChatAction).toHaveBeenCalledWith("456", "typing");
+	});
+
+	it("clears typing indicator when outbound message is sent", async () => {
+		channel = new TelegramChannel({ bus, token: "test-token" });
+		await channel.start();
+
+		// Trigger typing indicator
+		const handler = handlers.get("message:text");
+		await handler?.(makeTextCtx(123, 456, "Hello bot"));
+		expect(mockSendChatAction).toHaveBeenCalledWith("456", "typing");
+
+		// Send outbound — should clear the interval
+		mockSendChatAction.mockClear();
+		await channel.send({
+			channel: "telegram",
+			chatId: "456",
+			content: "Response",
+			replyTo: null,
+			media: [],
+			metadata: {},
+			messageId: "msg-1",
+			inReplyToMessageId: null,
+		});
+
+		// After sending, the typing interval should be cleared
+		// Advance time to verify no more typing actions are sent
+		await new Promise((r) => setTimeout(r, 50));
+		expect(mockSendChatAction).not.toHaveBeenCalled();
 	});
 
 	it("stop() calls bot.stop()", async () => {

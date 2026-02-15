@@ -118,16 +118,23 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					job.payload.channel && job.payload.chatId
 						? `${job.payload.channel}:${job.payload.chatId}`
 						: `cron:${job.id}`;
-				const result = await agentLoop.processDirect(cronPrompt, {
-					sessionKey,
-				});
-				if (job.payload.channel && job.payload.chatId && result.text) {
+				let content: string;
+				try {
+					const result = await agentLoop.processDirect(cronPrompt, {
+						sessionKey,
+					});
+					content = result.text?.trim() || "";
+				} catch (err) {
+					console.error(`[cron] processDirect failed for job ${job.id}:`, err);
+					content = `Scheduled reminder: ${job.payload.message}`;
+				}
+				if (job.payload.channel && job.payload.chatId && content) {
 					await bus.publish({
 						type: "message:outbound",
 						message: createOutboundMessage({
 							channel: job.payload.channel,
 							chatId: job.payload.chatId,
-							content: result.text,
+							content,
 							replyTo: null,
 							media: [],
 							metadata: {},
@@ -215,7 +222,7 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					skipHistory: true,
 					maxSteps: 1,
 				});
-				content = result.text || `Background task ${state.status}: ${state.task}`;
+				content = result.text?.trim() || `Background task ${state.status}: ${state.task}`;
 			} catch {
 				content =
 					state.status === "completed"

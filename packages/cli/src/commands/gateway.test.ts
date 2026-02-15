@@ -151,6 +151,7 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 				maxTokens: 8192,
 				temperature: 0.7,
 				maxToolIterations: 20,
+				messageTimeoutMs: 300000,
 				bootstrapFiles: [],
 			},
 		},

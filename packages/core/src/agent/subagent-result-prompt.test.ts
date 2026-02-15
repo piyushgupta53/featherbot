@@ -134,6 +134,34 @@ describe("buildSubagentResultPrompt", () => {
 		expect(prompt).toContain("(researcher)");
 	});
 
+	it("uses fallback when result is empty string", () => {
+		const state = makeState({
+			id: "test-id",
+			task: "Research something",
+			status: "completed",
+			result: "",
+			completedAt: new Date("2026-02-09T10:00:05Z"),
+		});
+
+		const prompt = buildSubagentResultPrompt(state);
+
+		expect(prompt).toContain("(no result)");
+	});
+
+	it("uses fallback when result is whitespace only", () => {
+		const state = makeState({
+			id: "test-id",
+			task: "Research something",
+			status: "completed",
+			result: "   \n\t  ",
+			completedAt: new Date("2026-02-09T10:00:05Z"),
+		});
+
+		const prompt = buildSubagentResultPrompt(state);
+
+		expect(prompt).toContain("(no result)");
+	});
+
 	it("omits spec label for general spec", () => {
 		const state = makeState({
 			id: "test-id",

@@ -12,15 +12,35 @@ export interface TelegramChannelOptions extends ChannelOptions {
 	token: string;
 }
 
+const TYPING_INTERVAL_MS = 4000;
+
 export class TelegramChannel extends BaseChannel {
 	readonly name = "telegram";
 
 	private bot: Bot | undefined;
 	private readonly token: string;
+	private readonly typingIntervals = new Map<string, ReturnType<typeof setInterval>>();
 
 	constructor(options: TelegramChannelOptions) {
 		super(options);
 		this.token = options.token;
+	}
+
+	private startTypingIndicator(chatId: string): void {
+		if (this.bot === undefined || this.typingIntervals.has(chatId)) return;
+		const send = () => {
+			this.bot?.api.sendChatAction(chatId, "typing").catch(() => {});
+		};
+		send();
+		this.typingIntervals.set(chatId, setInterval(send, TYPING_INTERVAL_MS));
+	}
+
+	private clearTypingIndicator(chatId: string): void {
+		const interval = this.typingIntervals.get(chatId);
+		if (interval !== undefined) {
+			clearInterval(interval);
+			this.typingIntervals.delete(chatId);
+		}
 	}
 
 	async start(): Promise<void> {
@@ -29,15 +49,17 @@ export class TelegramChannel extends BaseChannel {
 		this.bot.on("message:text", async (ctx) => {
 			try {
 				const senderId = `telegram:${ctx.from.id}`;
+				const chatId = String(ctx.chat.id);
 				const inbound = createInboundMessage({
 					channel: "telegram",
 					senderId,
-					chatId: String(ctx.chat.id),
+					chatId,
 					content: ctx.message.text,
 					media: [],
 					metadata: { telegramMessageId: ctx.message.message_id },
 				});
 				await this.publishInbound(inbound);
+				this.startTypingIndicator(chatId);
 			} catch (err) {
 				console.error("Telegram text handler error:", err);
 			}
@@ -46,6 +68,7 @@ export class TelegramChannel extends BaseChannel {
 		this.bot.on("message:photo", async (ctx) => {
 			try {
 				const senderId = `telegram:${ctx.from.id}`;
+				const chatId = String(ctx.chat.id);
 				const photos = ctx.message.photo;
 				const largest = photos.reduce<PhotoSize | undefined>((max, p) => {
 					if (max === undefined) return p;
@@ -59,12 +82,13 @@ export class TelegramChannel extends BaseChannel {
 				const inbound = createInboundMessage({
 					channel: "telegram",
 					senderId,
-					chatId: String(ctx.chat.id),
+					chatId,
 					content: ctx.message.caption ?? "",
 					media,
 					metadata: { telegramMessageId: ctx.message.message_id },
 				});
 				await this.publishInbound(inbound);
+				this.startTypingIndicator(chatId);
 			} catch (err) {
 				console.error("Telegram photo handler error:", err);
 			}
@@ -87,6 +111,7 @@ export class TelegramChannel extends BaseChannel {
 						metadata: { telegramMessageId: ctx.message.message_id },
 					});
 					await this.publishInbound(inbound);
+					this.startTypingIndicator(chatId);
 					return;
 				}
 
@@ -100,6 +125,7 @@ export class TelegramChannel extends BaseChannel {
 						metadata: { telegramMessageId: ctx.message.message_id },
 					});
 					await this.publishInbound(inbound);
+					this.startTypingIndicator(chatId);
 					return;
 				}
 
@@ -124,6 +150,7 @@ export class TelegramChannel extends BaseChannel {
 						metadata: { telegramMessageId: ctx.message.message_id },
 					});
 					await this.publishInbound(inbound);
+					this.startTypingIndicator(chatId);
 				} catch (transcribeErr) {
 					console.error("Telegram voice transcription error:", transcribeErr);
 					const inbound = createInboundMessage({
@@ -135,6 +162,7 @@ export class TelegramChannel extends BaseChannel {
 						metadata: { telegramMessageId: ctx.message.message_id },
 					});
 					await this.publishInbound(inbound);
+					this.startTypingIndicator(chatId);
 				}
 			} catch (err) {
 				console.error("Telegram voice handler error:", err);
@@ -148,6 +176,13 @@ export class TelegramChannel extends BaseChannel {
 		if (this.bot === undefined) return;
 
 		const chatId = message.chatId;
+		this.clearTypingIndicator(chatId);
+
+		if (!message.content.trim()) {
+			console.warn("Telegram send skipped: empty content for chat", chatId);
+			return;
+		}
+
 		const text = truncateForTelegram(message.content);
 		const escaped = escapeTelegramMarkdown(text);
 
@@ -175,6 +210,9 @@ export class TelegramChannel extends BaseChannel {
 	}
 
 	async stop(): Promise<void> {
+		for (const [chatId] of this.typingIntervals) {
+			this.clearTypingIndicator(chatId);
+		}
 		if (this.bot !== undefined) {
 			await this.bot.stop();
 			this.bot = undefined;

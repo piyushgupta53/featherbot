@@ -158,13 +158,35 @@ export class SubagentManager {
 			);
 		});
 
+		const safeOnComplete = (s: SubagentState) => {
+			try {
+				const result = this.onComplete(s);
+				if (result && typeof (result as Promise<void>).catch === "function") {
+					(result as Promise<void>).catch((onCompleteErr) => {
+						console.error(
+							`[subagent] onComplete failed for task ${id}:`,
+							onCompleteErr instanceof Error ? onCompleteErr.message : String(onCompleteErr),
+						);
+					});
+				}
+			} catch (onCompleteErr) {
+				console.error(
+					`[subagent] onComplete failed for task ${id}:`,
+					onCompleteErr instanceof Error ? onCompleteErr.message : String(onCompleteErr),
+				);
+			}
+		};
+
 		Promise.race([taskPromise, timeoutPromise, cancelPromise])
 			.then((result) => {
 				cleanupTimer?.();
 				state.status = "completed";
 				state.result = result.text;
+				if ((!state.result || state.result.trim() === "") && result.toolResults.length > 0) {
+					state.result = result.toolResults.map((r) => `${r.toolName}: ${r.content}`).join("\n");
+				}
 				state.completedAt = new Date();
-				return this.onComplete(state);
+				safeOnComplete(state);
 			})
 			.catch((err) => {
 				cleanupTimer?.();
@@ -176,7 +198,7 @@ export class SubagentManager {
 					state.error = err instanceof Error ? err.message : String(err);
 				}
 				state.completedAt = new Date();
-				return this.onComplete(state);
+				safeOnComplete(state);
 			});
 
 		return id;

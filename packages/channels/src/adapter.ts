@@ -33,10 +33,11 @@ export class BusAdapter {
 			try {
 				const result = await this.agentLoop.processMessage(message);
 				if (result.finishReason === BATCHED_FINISH_REASON) return;
+				const content = result.text.trim() || "I couldn't generate a response. Please try again.";
 				const outbound = createOutboundMessage({
 					channel: message.channel,
 					chatId: message.chatId,
-					content: result.text,
+					content,
 					replyTo: null,
 					media: [],
 					metadata: {},

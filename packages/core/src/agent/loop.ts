@@ -75,6 +75,35 @@ export class AgentLoop {
 			chatId: inbound.chatId,
 		};
 		const ctx = await this.resolveContext(this.systemPrompt, sessionContext);
+		const timeoutMs = this.options.config.messageTimeoutMs;
+		if (timeoutMs !== undefined) {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), timeoutMs);
+			try {
+				return await this.run(
+					sessionKey,
+					inbound.content,
+					ctx,
+					undefined,
+					undefined,
+					controller.signal,
+				);
+			} catch (err) {
+				if (controller.signal.aborted) {
+					return {
+						text: "Sorry, that request took too long. Please try again or simplify your question.",
+						usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+						steps: 0,
+						finishReason: "error",
+						toolCalls: [],
+						toolResults: [],
+					};
+				}
+				throw err;
+			} finally {
+				clearTimeout(timer);
+			}
+		}
 		return this.run(sessionKey, inbound.content, ctx);
 	}
 
@@ -203,10 +232,10 @@ export class AgentLoop {
 			usage: result.usage,
 		});
 
+		const userText = buildSafeUserText(result.text, result.toolCalls, result.toolResults);
+
 		return {
-			text: stripToolLog(
-				ensureTextResponse(result.text, result.toolCalls, result.toolResults) ?? "",
-			),
+			text: userText,
 			usage: result.usage,
 			steps,
 			finishReason: result.finishReason,
@@ -398,4 +427,33 @@ export function ensureTextResponse(
 	}
 
 	return textContent || "";
+}
+
+/**
+ * Build a user-safe final text response.
+ *
+ * Guarantees non-empty output even if tool-log stripping removes the entire
+ * model response.
+ */
+export function buildSafeUserText(
+	text: string | undefined,
+	toolCalls: LLMToolCall[],
+	toolResults: ToolResult[],
+): string {
+	const primary = ensureTextResponse(text, toolCalls, toolResults) ?? "";
+	const stripped = stripToolLog(primary);
+	if (stripped.trim().length > 0) {
+		return stripped;
+	}
+
+	const toolFallback = ensureTextResponse("", toolCalls, toolResults) ?? "";
+	if (toolFallback.trim().length > 0) {
+		return toolFallback;
+	}
+
+	if (primary.trim().length > 0) {
+		return primary.trim();
+	}
+
+	return "I couldn't generate a valid response. Please try again.";
 }

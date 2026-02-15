@@ -29,6 +29,7 @@ function makeConfig(overrides?: Partial<AgentConfig>): AgentConfig {
 		maxTokens: 8192,
 		temperature: 0.7,
 		maxToolIterations: 20,
+		messageTimeoutMs: 300000,
 		bootstrapFiles: ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"],
 		...overrides,
 	};
@@ -512,6 +513,31 @@ describe("AgentLoop", () => {
 			const assistantMsg = opts.messages[2];
 			expect(assistantMsg?.content).toBe("Response 1");
 			expect(assistantMsg?.content).not.toContain("[Tool activity:");
+		});
+	});
+
+	describe("message timeout", () => {
+		it("returns timeout message when messageTimeoutMs is exceeded", async () => {
+			const provider = makeMockProvider(
+				(opts) =>
+					new Promise((_, reject) => {
+						// Respect the abort signal like a real provider would
+						opts.signal?.addEventListener("abort", () => {
+							reject(new DOMException("The operation was aborted.", "AbortError"));
+						});
+					}),
+			);
+
+			const loop = new AgentLoop({
+				provider,
+				toolRegistry: new ToolRegistry(),
+				config: makeConfig({ messageTimeoutMs: 50 }),
+			});
+
+			const result = await loop.processMessage(makeInbound("slow question"));
+			expect(result.text).toContain("took too long");
+			expect(result.finishReason).toBe("error");
+			expect(result.steps).toBe(0);
 		});
 	});
 
