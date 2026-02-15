@@ -316,7 +316,7 @@ export function buildToolLog(toolCalls: LLMToolCall[], toolResults: ToolResult[]
 		entries.push(`${tc.name}(${compactArgs}) → ${resultText}`);
 	}
 
-	return `<tool_log>\n${entries.join("\n")}\n</tool_log>`;
+	return `[Tool activity: ${entries.join(" | ")}]`;
 }
 
 /**
@@ -347,14 +347,14 @@ function compactResultForLog(result: string): string {
 }
 
 /**
- * Strip any `<tool_log>…</tool_log>` blocks and other LLM-echoed XML
- * artifacts from the response text. The LLM sees tool_log in history
- * and sometimes mimics the pattern, or emits raw tool-call XML.
+ * Strip any tool activity artifacts the LLM may have echoed back
+ * in its response text — both legacy XML format and new bracket format.
  */
 function stripToolLog(text: string): string {
 	return text
 		.replace(/<tool_log>[\s\S]*?<\/tool_log>/g, "")
 		.replace(/<tool_log>[\s\S]*?<\/minimax:tool_call>/g, "")
 		.replace(/<tool_log>[\s\S]*$/g, "")
+		.replace(/\[Tool activity:[^\]]*\]/g, "")
 		.trim();
 }

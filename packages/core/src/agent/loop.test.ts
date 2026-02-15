@@ -481,7 +481,7 @@ describe("AgentLoop", () => {
 			expect(messages.length).toBe(4);
 			const assistantMsg = messages[2];
 			expect(assistantMsg?.content).toContain("Done. Removed.");
-			expect(assistantMsg?.content).toContain("<tool_log>");
+			expect(assistantMsg?.content).toContain("[Tool activity:");
 			expect(assistantMsg?.content).toContain("cron(");
 			expect(assistantMsg?.content).toContain("Job removed successfully");
 		});
@@ -505,7 +505,7 @@ describe("AgentLoop", () => {
 			const opts = getCallOpts(generateSpy, 1);
 			const assistantMsg = opts.messages[2];
 			expect(assistantMsg?.content).toBe("Response 1");
-			expect(assistantMsg?.content).not.toContain("<tool_log>");
+			expect(assistantMsg?.content).not.toContain("[Tool activity:");
 		});
 	});
 
@@ -1049,8 +1049,7 @@ describe("buildToolLog", () => {
 		const toolCalls = [{ id: "tc1", name: "cron", arguments: { action: "remove", jobId: "abc" } }];
 		const toolResults = [{ toolCallId: "tc1", toolName: "cron", content: "Job removed" }];
 		const log = buildToolLog(toolCalls, toolResults);
-		expect(log).toContain("<tool_log>");
-		expect(log).toContain("</tool_log>");
+		expect(log).toContain("[Tool activity:");
 		expect(log).toContain("cron(");
 		expect(log).toContain('"action":"remove"');
 		expect(log).toContain("→ Job removed");
@@ -1120,7 +1119,6 @@ describe("buildToolLog", () => {
 
 	it("returns empty entries with no tool calls", () => {
 		const log = buildToolLog([], []);
-		expect(log).toContain("<tool_log>");
-		expect(log).toContain("</tool_log>");
+		expect(log).toContain("[Tool activity:");
 	});
 });

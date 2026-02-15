@@ -71,7 +71,7 @@ export class SqliteHistory implements ConversationHistory {
 		return rows.map((row) => {
 			const msg: LLMMessage = {
 				role: row.role as LLMMessage["role"],
-				content: row.content,
+				content: sanitizeHistoryContent(row.content),
 			};
 			if (row.tool_call_id !== null) {
 				msg.toolCallId = row.tool_call_id;
@@ -146,4 +146,21 @@ export class SqliteHistory implements ConversationHistory {
 			}
 		}
 	}
+}
+
+/**
+ * Rewrite <tool_log> blocks in history into a plain-text format
+ * the model won't mimic as XML. Preserves the tool activity info
+ * so the agent can still reference what it did.
+ */
+function sanitizeHistoryContent(content: string): string {
+	if (!content.includes("<tool_log>")) return content;
+	return content
+		.replace(/<tool_log>([\s\S]*?)<\/tool_log>/g, (_match, inner: string) => {
+			const lines = inner.trim().split("\n").filter(Boolean);
+			return `\n[Tool activity: ${lines.join(" | ")}]\n`;
+		})
+		.replace(/<tool_log>[\s\S]*?<\/minimax:tool_call>/g, "")
+		.replace(/<tool_log>[\s\S]*$/g, "")
+		.trim();
 }
