@@ -6,6 +6,7 @@ import { SqliteHistory } from "../session/sqlite-history.js";
 import type { InboundMessage, LLMToolCall, SessionKey, ToolResult } from "../types.js";
 import { ContextBuilder } from "./context-builder.js";
 import type { ContextBuilderResult, SessionContext } from "./context-builder.js";
+import { ChainOfVerification } from "./cove.js";
 import { InMemoryHistory } from "./history.js";
 import { ConversationSummarizer } from "./summarizer.js";
 import { buildToolMap } from "./tool-bridge.js";
@@ -23,6 +24,7 @@ export class AgentLoop {
 	private readonly sessionStore?: SessionStore;
 	private readonly maxMessages: number;
 	private readonly summarizer?: ConversationSummarizer;
+	private readonly cove?: ChainOfVerification;
 
 	constructor(options: AgentLoopOptions) {
 		this.options = options;
@@ -47,6 +49,14 @@ export class AgentLoop {
 		if (summarizationEnabled) {
 			this.summarizer = new ConversationSummarizer({
 				provider: options.provider,
+				model: options.config.model,
+			});
+		}
+		const coveEnabled = options.config.coveEnabled ?? true;
+		if (coveEnabled) {
+			this.cove = new ChainOfVerification({
+				provider: options.provider,
+				toolRegistry: options.toolRegistry,
 				model: options.config.model,
 			});
 		}
@@ -206,11 +216,26 @@ export class AgentLoop {
 			signal,
 		});
 
+		let responseText = result.text;
+		if (this.cove && result.text) {
+			const hasUnverified = ChainOfVerification.hasUnverifiedClaims(result.text, result.toolCalls);
+			if (hasUnverified) {
+				const coveResult = await this.cove.verify(
+					result.text,
+					result.toolCalls,
+					result.toolResults,
+				);
+				if (coveResult.hasHallucination) {
+					responseText = coveResult.verifiedResponse;
+				}
+			}
+		}
+
 		const steps = result.toolCalls.length > 0 ? result.toolCalls.length + 1 : 1;
 
 		if (!skipHistory) {
 			history.add({ role: "user", content: userContent });
-			const finalText = ensureTextResponse(result.text, result.toolCalls, result.toolResults);
+			const finalText = ensureTextResponse(responseText, result.toolCalls, result.toolResults);
 			if (finalText) {
 				// Store only the clean text response, never tool logs
 				// Tool calls/results are handled by the AI SDK internally
@@ -224,13 +249,13 @@ export class AgentLoop {
 
 		this.invokeStepCallback({
 			stepNumber: steps,
-			text: result.text,
+			text: responseText,
 			toolCalls: result.toolCalls,
 			toolResults: result.toolResults,
 			usage: result.usage,
 		});
 
-		const userText = buildSafeUserText(result.text, result.toolCalls, result.toolResults);
+		const userText = buildSafeUserText(responseText, result.toolCalls, result.toolResults);
 
 		return {
 			text: userText,

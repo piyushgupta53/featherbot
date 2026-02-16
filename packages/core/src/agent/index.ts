@@ -34,6 +34,8 @@ export function createAgentLoop(
 	});
 }
 
+export { ChainOfVerification } from "./cove.js";
+export type { CoVeOptions, CoVeResult, VerificationResult } from "./cove.js";
 export { ContextBuilder, parseTimezoneFromUserMd } from "./context-builder.js";
 export type {
 	ContextBuilderOptions,

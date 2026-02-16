@@ -111,6 +111,7 @@ export {
 	BLOCKED_TOOLS,
 	BUILTIN_SPECS,
 	TOOL_PRESET_MAP,
+	ChainOfVerification,
 	buildSubagentResultPrompt,
 	buildToolMap,
 	ContextBuilder,
@@ -127,6 +128,8 @@ export type {
 	ContextBuilderOptions,
 	ContextBuilderResult,
 	ConversationHistory,
+	CoVeOptions,
+	CoVeResult,
 	SessionContext,
 	SpawnOptions,
 	StepCallback,
@@ -135,6 +138,7 @@ export type {
 	SubagentState,
 	SubagentStatus,
 	ToolPreset,
+	VerificationResult,
 } from "./agent/index.js";
 export {
 	createMemoryStore,
