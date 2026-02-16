@@ -178,12 +178,14 @@ export class TelegramChannel extends BaseChannel {
 		const chatId = message.chatId;
 		this.clearTypingIndicator(chatId);
 
-		if (!message.content.trim()) {
-			console.warn("Telegram send skipped: empty content for chat", chatId);
-			return;
+		// Ensure we always send something, even if it's a fallback
+		let content = message.content.trim();
+		if (!content) {
+			content = "I processed your request but didn't generate a response. Please try again.";
+			console.warn("Telegram sending fallback for empty content for chat", chatId);
 		}
 
-		const text = truncateForTelegram(message.content);
+		const text = truncateForTelegram(content);
 		const escaped = escapeTelegramMarkdown(text);
 
 		// biome-ignore lint/suspicious/noExplicitAny: grammy sendMessage options

@@ -318,8 +318,15 @@ describe("TelegramChannel", () => {
 			inReplyToMessageId: null,
 		});
 
-		expect(mockSendMessage).not.toHaveBeenCalled();
-		expect(consoleSpy).toHaveBeenCalledWith("Telegram send skipped: empty content for chat", "456");
+		expect(mockSendMessage).toHaveBeenCalledWith(
+			"456",
+			"I processed your request but didn't generate a response\\. Please try again\\.",
+			{ parse_mode: "MarkdownV2" },
+		);
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"Telegram sending fallback for empty content for chat",
+			"456",
+		);
 		consoleSpy.mockRestore();
 	});
 

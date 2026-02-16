@@ -30,10 +30,23 @@ export class BusAdapter {
 	start(): void {
 		this.handler = async (event: InboundMessageEvent) => {
 			const { message } = event;
+			const chatId = message.chatId;
 			try {
+				console.log(
+					`[adapter] Processing message from ${message.channel}:${chatId}: "${message.content.slice(0, 50)}..."`,
+				);
 				const result = await this.agentLoop.processMessage(message);
-				if (result.finishReason === BATCHED_FINISH_REASON) return;
+				console.log(
+					`[adapter] Got result for ${message.channel}:${chatId} - finishReason: ${result.finishReason}, text length: ${result.text.length}`,
+				);
+				if (result.finishReason === BATCHED_FINISH_REASON) {
+					console.log(`[adapter] Skipping batched message for ${message.channel}:${chatId}`);
+					return;
+				}
 				const content = result.text.trim() || "I couldn't generate a response. Please try again.";
+				console.log(
+					`[adapter] Sending response to ${message.channel}:${chatId}: "${content.slice(0, 100)}..."`,
+				);
 				const outbound = createOutboundMessage({
 					channel: message.channel,
 					chatId: message.chatId,
@@ -50,6 +63,9 @@ export class BusAdapter {
 				});
 			} catch (err) {
 				const errorText = err instanceof Error ? err.message : String(err);
+				console.error(
+					`[adapter] Error processing message from ${message.channel}:${chatId}: ${errorText}`,
+				);
 				const fallback = createOutboundMessage({
 					channel: message.channel,
 					chatId: message.chatId,
@@ -64,6 +80,7 @@ export class BusAdapter {
 					message: fallback,
 					timestamp: new Date(),
 				});
+				console.log(`[adapter] Sent error response to ${message.channel}:${chatId}`);
 			}
 		};
 		this.bus.subscribe("message:inbound", this.handler);
