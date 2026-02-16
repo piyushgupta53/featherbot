@@ -226,6 +226,21 @@ export class VercelLLMProvider implements LLMProvider {
 					}>,
 			);
 
+			// Log each step's text to diagnose multi-step generation issues
+			for (let i = 0; i < result.steps.length; i++) {
+				const step = result.steps[i];
+				const stepText = (step as { text?: string }).text || "";
+				const stepToolCalls = (step as { toolCalls?: unknown[] }).toolCalls || [];
+				console.log(
+					`[provider] step ${i + 1}: text=${stepText.length} chars, tools=${stepToolCalls.length}`,
+				);
+				if (stepText.length > 0 && stepText.length <= 100) {
+					console.log(`[provider] step ${i + 1} text: "${stepText}"`);
+				} else if (stepText.length > 100) {
+					console.log(`[provider] step ${i + 1} text: "${stepText.slice(0, 100)}..."`);
+				}
+			}
+
 			if (allToolCalls.length > 0) {
 				console.log(
 					`[provider] tool calls executed: ${allToolCalls.map((t) => t.toolName).join(", ")}`,

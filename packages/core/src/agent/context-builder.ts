@@ -125,6 +125,9 @@ export class ContextBuilder {
 		lines.push(
 			"When you use tools, describe what you did and the outcome in plain text only. The system handles all tool execution internally — you must not echo raw tool inputs, outputs, or code.",
 		);
+		lines.push(
+			"ALWAYS complete your response after tool execution. If you say 'Let me do that' or 'Now I'll create', you MUST follow up with a completion message explaining what was done.",
+		);
 		return lines.join("\n");
 	}
 
