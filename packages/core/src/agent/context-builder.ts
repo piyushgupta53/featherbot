@@ -119,7 +119,9 @@ export class ContextBuilder {
 			"All paths are relative to the workspace root. Do NOT attempt to access files outside the workspace.",
 		);
 		lines.push("");
-		lines.push("IMPORTANT: Never include <tool_log> tags in your responses.");
+		lines.push(
+			"IMPORTANT: Never include <tool_log> tags or [Tool activity: ...] blocks in your responses.",
+		);
 		lines.push(
 			"When you use tools, describe the results in plain text. The system logs tool calls automatically — you must not echo them.",
 		);
