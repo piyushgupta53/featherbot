@@ -484,13 +484,12 @@ describe("AgentLoop", () => {
 
 			const opts = getCallOpts(generateSpy, 1);
 			const messages = opts.messages;
-			// system + history(user + assistant-with-tool-log) + user
+			// system + history(user + assistant) + user
 			expect(messages.length).toBe(4);
 			const assistantMsg = messages[2];
 			expect(assistantMsg?.content).toContain("Done. Removed.");
-			expect(assistantMsg?.content).toContain("[Tool activity:");
-			expect(assistantMsg?.content).toContain("cron(");
-			expect(assistantMsg?.content).toContain("Job removed successfully");
+			// Tool activity is NOT stored in history (prevents LLM mimicry)
+			// AI SDK handles tool calls/results internally
 		});
 
 		it("does not append tool log when no tools were called", async () => {

@@ -212,11 +212,9 @@ export class AgentLoop {
 			history.add({ role: "user", content: userContent });
 			const finalText = ensureTextResponse(result.text, result.toolCalls, result.toolResults);
 			if (finalText) {
-				const assistantContent =
-					result.toolCalls.length > 0
-						? `${finalText}\n\n${buildToolLog(result.toolCalls, result.toolResults)}`
-						: finalText;
-				history.add({ role: "assistant", content: assistantContent });
+				// Store only the clean text response, never tool logs
+				// Tool calls/results are handled by the AI SDK internally
+				history.add({ role: "assistant", content: finalText });
 			}
 
 			if (this.sessionStore !== undefined) {
