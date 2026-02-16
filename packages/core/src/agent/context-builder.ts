@@ -128,6 +128,9 @@ export class ContextBuilder {
 		lines.push(
 			"ALWAYS complete your response after tool execution. If you say 'Let me do that' or 'Now I'll create', you MUST follow up with a completion message explaining what was done.",
 		);
+		lines.push(
+			"You have full access to the workspace and can install dependencies, create files, and execute commands as needed. Be proactive and self-sufficient. Never say 'you need to install' or 'I cannot' — just do it yourself using the available tools.",
+		);
 		return lines.join("\n");
 	}
 
