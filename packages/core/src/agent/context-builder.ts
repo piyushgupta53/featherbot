@@ -120,10 +120,10 @@ export class ContextBuilder {
 		);
 		lines.push("");
 		lines.push(
-			"IMPORTANT: Never include <tool_log> tags or [Tool activity: ...] blocks in your responses.",
+			"IMPORTANT: Never include <tool_log> tags, [Tool activity: ...] blocks, raw code, file content, or tool arguments in your responses.",
 		);
 		lines.push(
-			"When you use tools, describe the results in plain text. The system logs tool calls automatically — you must not echo them.",
+			"When you use tools, describe what you did and the outcome in plain text only. The system handles all tool execution internally — you must not echo raw tool inputs, outputs, or code.",
 		);
 		return lines.join("\n");
 	}
