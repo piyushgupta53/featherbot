@@ -217,7 +217,8 @@ export async function runRepl(): Promise<void> {
 					skipHistory: true,
 				});
 				const trimmed = result.text?.trim();
-				if (!trimmed || trimmed.startsWith("SKIP")) return;
+				// Skip if text is empty or starts with SKIP (heartbeat has nothing actionable)
+				if (!trimmed || /^SKIP\b/i.test(trimmed)) return;
 
 				const now = new Date();
 
