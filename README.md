@@ -28,6 +28,7 @@
 - **Active learning** — Correction detection triggers urgent memory extraction (60s vs 5min)
 - **Large result eviction** — Oversized tool results saved to scratch with head+tail preview
 - **Todo tracking** — Structured task list with add/complete/delete for multi-step workflows
+- **Chain of Verification (CoVe)** — Detects and corrects hallucinated action claims before responding
 - **Docker support** — Multi-stage build, docker-compose, headless mode
 
 ## Prerequisites
@@ -208,6 +209,42 @@ File-based storage in `workspace/memory/` with a two-layer persistence strategy:
 **On-demand recall** — The `recall_recent` tool lets the agent pull past daily notes (up to 30 days) without bloating every prompt.
 
 No vector store or embeddings — just markdown files with a lifecycle.
+
+## Chain of Verification (CoVe)
+
+FeatherBot includes a Chain of Verification system to prevent hallucinated action claims. When the LLM generates a response claiming it performed an action (created a file, ran a command, installed a package), CoVe verifies the claim against actual tool execution evidence.
+
+**How it works:**
+
+1. **Detect claims** — Response is scanned for action verbs: "created", "wrote", "updated", "installed", "ran", "executed"
+2. **Verify evidence** — Claims are checked against tool calls and results
+3. **Correct hallucinations** — If a claim lacks tool evidence, the LLM generates a corrected response
+
+**Example:**
+
+```
+LLM response: "Done. I created data/script.py for you."
+Tool calls: []  (empty — no write_file was called)
+
+CoVe detects: Claim "created data/script.py" with no matching tool call
+Corrected response: "I apologize, but I didn't actually create that file. Let me do it now."
+```
+
+CoVe also detects failed tool executions — if the agent says "installed successfully" but `pip install` returned exit code 1, the response is corrected.
+
+**Configuration:**
+
+Enabled by default. Disable via config:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "coveEnabled": false
+    }
+  }
+}
+```
 
 ## Cron & Heartbeat
 
