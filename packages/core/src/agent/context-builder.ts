@@ -120,10 +120,10 @@ export class ContextBuilder {
 		);
 		lines.push("");
 		lines.push(
-			"IMPORTANT: Never include <tool_log> tags, [Tool activity: ...] blocks, raw code, file content, or tool arguments in your responses.",
+			"CRITICAL: DO NOT generate or output <tool_log> tags, [Tool activity: ...] blocks, tool call syntax, raw code snippets, file content, or tool arguments in your responses. These are internal system formats, not user-facing content.",
 		);
 		lines.push(
-			"When you use tools, describe what you did and the outcome in plain text only. The system handles all tool execution internally — you must not echo raw tool inputs, outputs, or code.",
+			"When tools execute, respond ONLY with a natural language summary of what was accomplished. Never echo the technical execution details, JSON parameters, or file contents.",
 		);
 		lines.push(
 			"ALWAYS complete your response after tool execution. If you say 'Let me do that' or 'Now I'll create', you MUST follow up with a completion message explaining what was done.",

@@ -389,7 +389,7 @@ export function stripToolLog(text: string): string {
 		.replace(/<tool_log>[\s\S]*$/g, "")
 		.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
 		.replace(/\[\[Tool[^\]]*\]\]/g, "")
-		.replace(/\[Tool activity:[^\]]*\]/g, "")
+		.replace(/\[Tool activity:[\s\S]*?\](?=\s|$)/g, "")
 		.replace(/\n{3,}/g, "\n\n")
 		.trim();
 }
@@ -433,7 +433,7 @@ export function ensureTextResponse(
  * Build a user-safe final text response.
  *
  * Guarantees non-empty output even if tool-log stripping removes the entire
- * model response.
+ * model response. Never returns raw tool activity or technical content.
  */
 export function buildSafeUserText(
 	text: string | undefined,
@@ -442,18 +442,19 @@ export function buildSafeUserText(
 ): string {
 	const primary = ensureTextResponse(text, toolCalls, toolResults) ?? "";
 	const stripped = stripToolLog(primary);
+
+	// If stripping left us with content, use it
 	if (stripped.trim().length > 0) {
 		return stripped;
 	}
 
+	// If primary was just tool activity (now stripped away), generate a proper fallback
+	// NEVER return the raw tool activity text
 	const toolFallback = ensureTextResponse("", toolCalls, toolResults) ?? "";
 	if (toolFallback.trim().length > 0) {
 		return toolFallback;
 	}
 
-	if (primary.trim().length > 0) {
-		return primary.trim();
-	}
-
-	return "I couldn't generate a valid response. Please try again.";
+	// Final fallback - generic message, never raw tool content
+	return "I processed your request but couldn't generate a proper response. Please try again.";
 }
