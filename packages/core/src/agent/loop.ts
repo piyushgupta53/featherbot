@@ -217,7 +217,7 @@ export class AgentLoop {
 		});
 
 		let responseText = result.text;
-		if (this.cove && result.text && result.finishReason !== "error") {
+		if (this.cove && result.text && result.finishReason !== "error" && result.toolCalls.length === 0) {
 			const hasUnverified = ChainOfVerification.hasUnverifiedClaims(result.text, result.toolCalls);
 			if (hasUnverified) {
 				try {
