@@ -144,7 +144,7 @@ async function* mapFullStream(aiStream: AsyncIterable<any>): AsyncGenerator<Stre
 }
 
 function createErrorStreamResult(message: string): StreamResult {
-	async function* emptyStream(): AsyncGenerator<string> {}
+	async function* emptyStream(): AsyncGenerator<string> { }
 	async function* errorStream(): AsyncGenerator<StreamPart> {
 		yield { type: "error", error: message };
 	}
@@ -269,6 +269,10 @@ export class VercelLLMProvider implements LLMProvider {
 				finishReason: result.finishReason,
 			};
 		} catch (error) {
+			// Re-throw abort errors so callers can handle timeout logic
+			if (error instanceof DOMException && error.name === "AbortError") {
+				throw error;
+			}
 			const message = error instanceof Error ? error.message : String(error);
 			console.log(`[provider] ERROR: ${message}`);
 			return {

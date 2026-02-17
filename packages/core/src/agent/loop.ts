@@ -217,16 +217,20 @@ export class AgentLoop {
 		});
 
 		let responseText = result.text;
-		if (this.cove && result.text) {
+		if (this.cove && result.text && result.finishReason !== "error") {
 			const hasUnverified = ChainOfVerification.hasUnverifiedClaims(result.text, result.toolCalls);
 			if (hasUnverified) {
-				const coveResult = await this.cove.verify(
-					result.text,
-					result.toolCalls,
-					result.toolResults,
-				);
-				if (coveResult.hasHallucination) {
-					responseText = coveResult.verifiedResponse;
+				try {
+					const coveResult = await this.cove.verify(
+						result.text,
+						result.toolCalls,
+						result.toolResults,
+					);
+					if (coveResult.hasHallucination) {
+						responseText = coveResult.verifiedResponse;
+					}
+				} catch {
+					// CoVE failed — use original response. Unverified > no response.
 				}
 			}
 		}
@@ -236,7 +240,7 @@ export class AgentLoop {
 		if (!skipHistory) {
 			history.add({ role: "user", content: userContent });
 			const finalText = ensureTextResponse(responseText, result.toolCalls, result.toolResults);
-			if (finalText) {
+			if (finalText && !finalText.startsWith("[LLM Error]")) {
 				// Store only the clean text response, never tool logs
 				// Tool calls/results are handled by the AI SDK internally
 				history.add({ role: "assistant", content: finalText });

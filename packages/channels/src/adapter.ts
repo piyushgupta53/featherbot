@@ -41,6 +41,20 @@ export class BusAdapter {
 				);
 				if (result.finishReason === BATCHED_FINISH_REASON) {
 					console.log(`[adapter] Skipping batched message for ${message.channel}:${chatId}`);
+					// Still publish an outbound so the channel can clear typing indicators
+					await this.bus.publish({
+						type: "message:outbound",
+						message: createOutboundMessage({
+							channel: message.channel,
+							chatId: message.chatId,
+							content: "",
+							replyTo: null,
+							media: [],
+							metadata: { batched: true },
+							inReplyToMessageId: null,
+						}),
+						timestamp: new Date(),
+					});
 					return;
 				}
 				const content = result.text.trim() || "I couldn't generate a response. Please try again.";

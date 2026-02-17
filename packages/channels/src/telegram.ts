@@ -29,7 +29,7 @@ export class TelegramChannel extends BaseChannel {
 	private startTypingIndicator(chatId: string): void {
 		if (this.bot === undefined || this.typingIntervals.has(chatId)) return;
 		const send = () => {
-			this.bot?.api.sendChatAction(chatId, "typing").catch(() => {});
+			this.bot?.api.sendChatAction(chatId, "typing").catch(() => { });
 		};
 		send();
 		this.typingIntervals.set(chatId, setInterval(send, TYPING_INTERVAL_MS));
@@ -177,6 +177,9 @@ export class TelegramChannel extends BaseChannel {
 
 		const chatId = message.chatId;
 		this.clearTypingIndicator(chatId);
+
+		// Batched messages only need to clear the typing indicator, not send a message
+		if (message.metadata?.batched === true) return;
 
 		// Ensure we always send something, even if it's a fallback
 		let content = message.content.trim();

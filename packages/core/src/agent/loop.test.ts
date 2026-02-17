@@ -542,7 +542,7 @@ describe("AgentLoop", () => {
 	});
 
 	describe("error handling and callbacks", () => {
-		it("adds LLM error text to history for self-correction", async () => {
+		it("excludes LLM error text from history to prevent model confusion", async () => {
 			let callCount = 0;
 			const generateSpy = vi.fn<GenerateFn>(async () => {
 				callCount++;
@@ -561,15 +561,13 @@ describe("AgentLoop", () => {
 			await loop.processMessage(makeInbound("first"));
 			await loop.processMessage(makeInbound("retry"));
 
-			// Second call should see the error in history
+			// Second call should NOT see the error in history (it confuses the model)
 			const opts = getCallOpts(generateSpy, 1);
 			const messages = opts.messages;
-			// system + history(user "first" + assistant "[LLM Error]...") + user "retry"
-			expect(messages.length).toBe(4);
-			expect(messages[2]).toEqual({
-				role: "assistant",
-				content: "[LLM Error] rate limited",
-			});
+			// system + history(user "first") + user "retry" — no assistant error message
+			expect(messages.length).toBe(3);
+			expect(messages[1]).toEqual({ role: "user", content: "first" });
+			expect(messages[2]).toEqual({ role: "user", content: "retry" });
 		});
 
 		it("invokes onStepFinish callback with step event", async () => {
@@ -702,10 +700,10 @@ describe("AgentLoop", () => {
 				getMemoryFilePath: () => "",
 				getDailyNotePath: () => "",
 				readMemoryFile: async () => "",
-				writeMemoryFile: async () => {},
+				writeMemoryFile: async () => { },
 				readDailyNote: async () => "",
-				writeDailyNote: async () => {},
-				deleteDailyNote: async () => {},
+				writeDailyNote: async () => { },
+				deleteDailyNote: async () => { },
 				listDailyNotes: async () => [] as string[],
 			};
 

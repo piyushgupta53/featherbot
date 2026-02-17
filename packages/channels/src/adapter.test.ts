@@ -93,7 +93,7 @@ describe("BusAdapter", () => {
 		adapter.stop();
 	});
 
-	it("suppresses outbound when agent returns BATCHED_FINISH_REASON", async () => {
+	it("publishes batched outbound with metadata when agent returns BATCHED_FINISH_REASON", async () => {
 		bus = new MessageBus();
 		const agent = makeMockAgent({ finishReason: BATCHED_FINISH_REASON });
 		const adapter = new BusAdapter({ bus, agentLoop: agent });
@@ -116,7 +116,9 @@ describe("BusAdapter", () => {
 		await bus.publish({ type: "message:inbound", message: inbound, timestamp: new Date() });
 
 		expect(agent.processMessage).toHaveBeenCalledOnce();
-		expect(outboundEvents).toHaveLength(0);
+		expect(outboundEvents).toHaveLength(1);
+		expect(outboundEvents[0]?.message.content).toBe("");
+		expect(outboundEvents[0]?.message.metadata).toEqual({ batched: true });
 
 		adapter.stop();
 	});
