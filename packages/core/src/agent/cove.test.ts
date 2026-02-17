@@ -42,9 +42,40 @@ describe("ChainOfVerification", () => {
 			expect(result).toBe(false);
 		});
 
-		it("passes for responses without action claims", () => {
+		it("passes for short responses without action claims", () => {
 			const response = "The weather today is sunny.";
 			const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+
+			const result = ChainOfVerification.hasUnverifiedClaims(response, toolCalls);
+
+			expect(result).toBe(false);
+		});
+
+		it("flags substantive response without search tools for LLM verification", () => {
+			const response = "The current temperature in Delhi is 28°C and the weather forecast shows rain expected tomorrow afternoon with high humidity levels.";
+			const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+
+			const result = ChainOfVerification.hasUnverifiedClaims(response, toolCalls);
+
+			expect(result).toBe(true);
+		});
+
+		it("passes substantive response when web_search was called", () => {
+			const response = "The current temperature in Delhi is 28°C and the weather forecast shows rain expected tomorrow afternoon with high humidity levels.";
+			const toolCalls = [
+				{ name: "web_search", arguments: { query: "Delhi weather" } },
+			];
+
+			const result = ChainOfVerification.hasUnverifiedClaims(response, toolCalls);
+
+			expect(result).toBe(false);
+		});
+
+		it("passes substantive response when firecrawl_search was called", () => {
+			const response = "According to the latest reports, India's next cricket match is scheduled for Friday against Australia at the Melbourne Cricket Ground.";
+			const toolCalls = [
+				{ name: "firecrawl_search", arguments: { query: "India cricket schedule" } },
+			];
 
 			const result = ChainOfVerification.hasUnverifiedClaims(response, toolCalls);
 

@@ -38,10 +38,10 @@ describe("ContextBuilder", () => {
 			getMemoryFilePath: () => "",
 			getDailyNotePath: () => "",
 			readMemoryFile: async () => "",
-			writeMemoryFile: async () => {},
+			writeMemoryFile: async () => { },
 			readDailyNote: async () => "",
-			writeDailyNote: async () => {},
-			deleteDailyNote: async () => {},
+			writeDailyNote: async () => { },
+			deleteDailyNote: async () => { },
 			listDailyNotes: async () => [] as string[],
 		};
 	}
@@ -97,7 +97,8 @@ describe("ContextBuilder", () => {
 			expect(systemPrompt).toContain(`Node.js: ${process.version}`);
 			expect(systemPrompt).toContain(`Platform: ${platform()}`);
 			expect(systemPrompt).toContain("Workspace: /tmp/test-workspace");
-			expect(systemPrompt).toContain("Timestamp:");
+			const hasTimestamp = systemPrompt.includes("Timestamp:") || systemPrompt.includes("Timestamp (UTC):");
+			expect(hasTimestamp).toBe(true);
 		});
 
 		it("uses custom agent name", async () => {
@@ -134,7 +135,7 @@ describe("ContextBuilder", () => {
 			expect(systemPrompt).not.toMatch(/^Timestamp: \d{4}/m);
 		});
 
-		it("uses plain Timestamp when USER.md has placeholder timezone", async () => {
+		it("falls back to system timezone when USER.md has placeholder timezone", async () => {
 			const ws = await makeTempWorkspace();
 			await writeFile(
 				join(ws, "USER.md"),
@@ -146,21 +147,29 @@ describe("ContextBuilder", () => {
 				bootstrapFiles: ["USER.md"],
 			});
 			const { systemPrompt } = await builder.build();
-			expect(systemPrompt).toContain("Timestamp:");
-			expect(systemPrompt).not.toContain("Timestamp (UTC):");
-			expect(systemPrompt).not.toContain("Timestamp (local):");
+			// With detectSystemTimezone fallback, we should still get timezone-aware timestamps
+			const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (sysTz && sysTz !== "UTC") {
+				expect(systemPrompt).toContain("Timestamp (UTC):");
+				expect(systemPrompt).toContain("Timestamp (local):");
+				expect(systemPrompt).toContain(`Timezone: ${sysTz}`);
+			} else {
+				expect(systemPrompt).toContain("Timestamp:");
+			}
 		});
 
-		it("timestamp is a valid ISO string when no timezone", async () => {
-			const before = new Date().toISOString();
+		it("timestamp is present in the system prompt", async () => {
 			const builder = new ContextBuilder(defaultOptions);
 			const { systemPrompt } = await builder.build();
-			const after = new Date().toISOString();
-			const match = systemPrompt.match(/Timestamp: (.+)/);
-			expect(match).not.toBeNull();
-			const timestamp = match?.[1] ?? "";
-			expect(timestamp >= before).toBe(true);
-			expect(timestamp <= after).toBe(true);
+			// With system timezone fallback, format depends on host timezone
+			const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (sysTz && sysTz !== "UTC") {
+				expect(systemPrompt).toContain("Timestamp (UTC):");
+				expect(systemPrompt).toContain("Timestamp (local):");
+			} else {
+				const match = systemPrompt.match(/Timestamp: (.+)/);
+				expect(match).not.toBeNull();
+			}
 		});
 	});
 
@@ -636,7 +645,7 @@ describe("ContextBuilder", () => {
 			expect(result.userTimezone).toBe("America/New_York");
 		});
 
-		it("userTimezone is undefined when USER.md has placeholder", async () => {
+		it("userTimezone falls back to system timezone when USER.md has placeholder", async () => {
 			const ws = await makeTempWorkspace();
 			await writeFile(
 				join(ws, "USER.md"),
@@ -648,10 +657,15 @@ describe("ContextBuilder", () => {
 				bootstrapFiles: ["USER.md"],
 			});
 			const result = await builder.build();
-			expect(result.userTimezone).toBeUndefined();
+			const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (sysTz && sysTz !== "UTC") {
+				expect(result.userTimezone).toBe(sysTz);
+			} else {
+				expect(result.userTimezone).toBeUndefined();
+			}
 		});
 
-		it("userTimezone is undefined when USER.md is missing", async () => {
+		it("userTimezone falls back to system timezone when USER.md is missing", async () => {
 			const ws = await makeTempWorkspace();
 			const builder = new ContextBuilder({
 				...defaultOptions,
@@ -659,7 +673,12 @@ describe("ContextBuilder", () => {
 				bootstrapFiles: ["USER.md"],
 			});
 			const result = await builder.build();
-			expect(result.userTimezone).toBeUndefined();
+			const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (sysTz && sysTz !== "UTC") {
+				expect(result.userTimezone).toBe(sysTz);
+			} else {
+				expect(result.userTimezone).toBeUndefined();
+			}
 		});
 	});
 

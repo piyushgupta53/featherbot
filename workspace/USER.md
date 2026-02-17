@@ -2,17 +2,16 @@
 
 ## About
 
-- Name: (your name here)
-- Timezone: (your timezone, e.g., Asia/Kolkata)
+- Name: Piyush
+- Timezone: Asia/Kolkata
 - Language: English
 
 ## Preferences
 
 - Response length: concise
 - Preferred channels: terminal
-- Topics of interest: (add your interests)
+- Topics of interest: AI agents, software engineering
 
 ## Notes
 
-- (Add anything you'd like the agent to remember about you)
-- (Dietary preferences, work schedule, frequently used tools, etc.)
+- Building FeatherBot - a personal AI agent framework

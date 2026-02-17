@@ -11,6 +11,7 @@ export interface GenerateOptions {
 	model?: string;
 	messages: LLMMessage[];
 	tools?: Record<string, ToolDefinition>;
+	toolChoice?: "auto" | "required" | "none";
 	maxSteps?: number;
 	temperature?: number;
 	maxTokens?: number;

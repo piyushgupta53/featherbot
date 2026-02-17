@@ -18,7 +18,7 @@ import {
 	loadConfig,
 	parseTimezoneFromUserMd,
 } from "@featherbot/core";
-import { HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
+import { HeartbeatService, buildHeartbeatPrompt, isHeartbeatSkip } from "@featherbot/scheduler";
 import type { ProactiveSendRecord } from "@featherbot/scheduler";
 import type { Command } from "commander";
 
@@ -172,7 +172,7 @@ export async function runRepl(): Promise<void> {
 		bus,
 		onStop: () => {
 			heartbeatService?.stop();
-			memoryExtractor?.dispose().catch(() => {});
+			memoryExtractor?.dispose().catch(() => { });
 			adapter.stop();
 			bus.close();
 			process.exit(0);
@@ -217,8 +217,8 @@ export async function runRepl(): Promise<void> {
 					skipHistory: true,
 				});
 				const trimmed = result.text?.trim();
-				// Skip if text is empty or starts with SKIP (heartbeat has nothing actionable)
-				if (!trimmed || /^SKIP\b/i.test(trimmed)) return;
+				// Skip if text is empty, contains SKIP, or is a non-actionable filler message
+				if (!trimmed || isHeartbeatSkip(trimmed)) return;
 
 				const now = new Date();
 
@@ -282,7 +282,7 @@ export async function runRepl(): Promise<void> {
 	const shutdown = () => {
 		channelManager.stopAll().then(() => {
 			heartbeatService?.stop();
-			memoryExtractor?.dispose().catch(() => {});
+			memoryExtractor?.dispose().catch(() => { });
 			adapter.stop();
 			bus.close();
 			process.exit(0);

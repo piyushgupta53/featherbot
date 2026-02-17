@@ -112,6 +112,15 @@ export class ChainOfVerification {
 			}
 		}
 
+		// Check for factual claims without search tool evidence
+		const factualVerification = await this.verifyFactualClaims(
+			response,
+			toolCalls,
+		);
+		if (factualVerification) {
+			verifications.push(factualVerification);
+		}
+
 		// Also verify that tool calls succeeded (not just that they were made)
 		for (const result of toolResults) {
 			const hasError = this.checkForError(result.content);
@@ -248,7 +257,55 @@ Provide a corrected response that only claims what was actually done.`;
 	}
 
 	/**
+	 * Use LLM to check if the response contains factual real-world claims
+	 * that should have been verified with a search tool but weren't.
+	 * This replaces keyword-based detection with intelligent assessment.
+	 */
+	private async verifyFactualClaims(
+		response: string,
+		toolCalls: Array<{ name: string; arguments: Record<string, unknown> }>,
+	): Promise<VerificationResult | null> {
+		// If search tools were used, the response is grounded
+		const searchTools = ["web_search", "web_fetch", "firecrawl_search", "firecrawl_crawl"];
+		const hasSearchEvidence = toolCalls.some((tc) => searchTools.includes(tc.name));
+		if (hasSearchEvidence) return null;
+
+		// Skip very short or clearly conversational responses
+		if (response.length < 50) return null;
+
+		try {
+			const checkPrompt = `Analyze this response and determine if it contains specific factual claims about the real world that could be outdated, wrong, or fabricated. Only flag claims about real-world information like current events, weather, prices, scores, schedules, or time-sensitive data — NOT general knowledge, greetings, or opinions.
+
+Response: """${response}"""
+
+Respond with ONLY "YES" if the response contains unverified real-world factual claims, or "NO" if it does not. Do not explain.`;
+
+			const result = await this.provider.generate({
+				model: this.model,
+				messages: [{ role: "system", content: checkPrompt }],
+				temperature: 0,
+				maxTokens: 10,
+			});
+
+			const answer = result.text.trim().toUpperCase();
+			if (answer.startsWith("YES")) {
+				return {
+					claim: "Factual real-world claims without search verification",
+					verified: false,
+					evidence: "Response contains factual claims but no web_search/web_fetch was called to verify them",
+				};
+			}
+		} catch {
+			// If the LLM check fails, don't block the response
+			return null;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Quick check - does response have claims without tool evidence?
+	 * This is a fast gate before the full verify() call.
 	 */
 	static hasUnverifiedClaims(
 		response: string,
@@ -270,6 +327,19 @@ Provide a corrected response that only claims what was actually done.`;
 				if (!hasWriteTool) {
 					return true; // Claim without tool evidence
 				}
+			}
+		}
+
+		// Check for factual claims without search tool evidence
+		// This is a structural check: if the response is substantive (not just
+		// a greeting or follow-up) and no search tools were used, flag for
+		// full LLM-based verification
+		if (response.length >= 50) {
+			const searchTools = ["web_search", "web_fetch", "firecrawl_search", "firecrawl_crawl"];
+			const hasSearchEvidence = toolCalls.some((tc) => searchTools.includes(tc.name));
+			if (!hasSearchEvidence) {
+				// Let the full verify() LLM check determine if it's actually factual
+				return true;
 			}
 		}
 

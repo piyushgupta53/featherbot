@@ -36,7 +36,7 @@ import {
 } from "@featherbot/core";
 import { cleanScratchDir } from "@featherbot/core";
 import type { FeatherBotConfig, SpawnToolOriginContext } from "@featherbot/core";
-import { CronService, HeartbeatService, buildHeartbeatPrompt } from "@featherbot/scheduler";
+import { CronService, HeartbeatService, buildHeartbeatPrompt, isHeartbeatSkip } from "@featherbot/scheduler";
 import type { ProactiveSendRecord } from "@featherbot/scheduler";
 import type { Command } from "commander";
 
@@ -295,8 +295,8 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 					skipHistory: true,
 				});
 				const trimmed = result.text?.trim();
-				// Skip if text is empty or starts with SKIP (heartbeat has nothing actionable)
-				if (!trimmed || /^SKIP\b/i.test(trimmed)) return;
+				// Skip if text is empty, contains SKIP, or is a non-actionable filler message
+				if (!trimmed || isHeartbeatSkip(trimmed)) return;
 
 				const now = new Date();
 
@@ -322,9 +322,9 @@ export function createGateway(config: FeatherBotConfig): Gateway {
 				const route =
 					config.heartbeat.notifyChannel && config.heartbeat.notifyChatId
 						? {
-								channel: config.heartbeat.notifyChannel,
-								chatId: config.heartbeat.notifyChatId,
-							}
+							channel: config.heartbeat.notifyChannel,
+							chatId: config.heartbeat.notifyChatId,
+						}
 						: lastActiveRoute;
 				if (!route) {
 					console.warn(

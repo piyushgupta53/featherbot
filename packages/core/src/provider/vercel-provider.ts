@@ -202,6 +202,7 @@ export class VercelLLMProvider implements LLMProvider {
 					// biome-ignore lint/suspicious/noExplicitAny: message types are complex unions, our mapping is correct
 					messages: messages as any,
 					tools: aiTools,
+					toolChoice: options.toolChoice,
 					temperature: options.temperature ?? this.defaultTemperature,
 					maxOutputTokens: options.maxTokens ?? this.defaultMaxTokens,
 					stopWhen: options.maxSteps ? stepCountIs(options.maxSteps) : undefined,

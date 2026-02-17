@@ -45,7 +45,7 @@ export class ContextBuilder {
 		const sections: string[] = [];
 
 		const { sections: bootstrapSections, contentMap } = await this.loadBootstrapFiles();
-		const userTimezone = extractTimezone(contentMap);
+		const userTimezone = extractTimezone(contentMap) ?? detectSystemTimezone();
 		sections.push(this.buildIdentityBlock(userTimezone ?? undefined));
 
 		for (const section of bootstrapSections) {
@@ -130,6 +130,21 @@ export class ContextBuilder {
 		);
 		lines.push(
 			"You have full access to the workspace and can install dependencies, create files, and execute commands as needed. Be proactive and self-sufficient. Never say 'you need to install' or 'I cannot' — just do it yourself using the available tools.",
+		);
+		lines.push("");
+		lines.push("## Factual Grounding");
+		lines.push(
+			"Before answering any question that involves real-world facts that could be outdated, time-sensitive, or that you are not 100% certain about, you MUST use a tool (web_search, web_fetch, firecrawl_search) to verify the information first.",
+		);
+		lines.push("This includes but is not limited to:");
+		lines.push("- Current events, news, sports scores/schedules, election results");
+		lines.push("- Weather, stock prices, exchange rates, crypto prices");
+		lines.push("- Release dates, product availability, API status");
+		lines.push('- Any "what is the current/latest/today\'s" type question');
+		lines.push("- Any claim about something that happened after your training cutoff");
+		lines.push("");
+		lines.push(
+			"NEVER fabricate, guess, or infer factual answers from memory when a tool can verify them. If a tool call fails or returns no results, say so honestly — do not fill in with guesses. When you DO use a tool, your response MUST be grounded in the tool's actual output, not your prior assumptions.",
 		);
 		return lines.join("\n");
 	}
@@ -391,4 +406,20 @@ function extractTimezone(contentMap: Map<string, string>): string | null {
 		return null;
 	}
 	return parseTimezoneFromUserMd(userContent);
+}
+
+/**
+ * Detect the system's local timezone as a fallback when USER.md
+ * has no timezone configured. Returns IANA timezone string or null.
+ */
+export function detectSystemTimezone(): string | null {
+	try {
+		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (tz && tz !== "UTC") {
+			return tz;
+		}
+		return null;
+	} catch {
+		return null;
+	}
 }
