@@ -12,7 +12,7 @@ export const AgentConfigSchema = z.object({
 	maxToolIterations: z.number().int().positive().default(20),
 	messageTimeoutMs: z.number().int().positive().default(300000),
 	bootstrapFiles: z.array(z.string()).default(DEFAULT_BOOTSTRAP_FILES),
-	coveEnabled: z.boolean().default(true),
+
 });
 
 export const TelegramChannelConfigSchema = z.object({

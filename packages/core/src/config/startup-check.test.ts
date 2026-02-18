@@ -15,7 +15,7 @@ function makeConfig(overrides?: Partial<FeatherBotConfig>): FeatherBotConfig {
 				maxToolIterations: 20,
 				messageTimeoutMs: 300000,
 				bootstrapFiles: [],
-				coveEnabled: true,
+
 			},
 		},
 		channels: {
@@ -131,7 +131,7 @@ describe("checkStartupConfig", () => {
 						maxToolIterations: 20,
 						messageTimeoutMs: 300000,
 						bootstrapFiles: [],
-						coveEnabled: true,
+
 					},
 				},
 				providers: {

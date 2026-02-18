@@ -31,7 +31,7 @@ function makeConfig(overrides?: Partial<AgentConfig>): AgentConfig {
 		maxToolIterations: 20,
 		messageTimeoutMs: 300000,
 		bootstrapFiles: ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"],
-		coveEnabled: true,
+
 		...overrides,
 	};
 }
